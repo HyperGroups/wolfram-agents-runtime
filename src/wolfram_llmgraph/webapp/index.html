@@ -237,6 +237,22 @@ pre.code::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radiu
   main{height:auto}
   aside{max-height:60vh}
 }
+
+.intro-panel{background:var(--panel);border-bottom:1px solid var(--line);padding:20px;display:none}
+.intro-panel.show{display:block}
+.intro-content{max-width:1200px;margin:0 auto}
+.intro-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.intro-header h2{color:var(--accent-light);font-size:1.3em;margin:0}
+.intro-close{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;padding:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all .15s}
+.intro-close:hover{background:var(--panel2);color:var(--txt)}
+.intro-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-top:15px}
+.intro-section{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:15px}
+.intro-section h3{color:var(--accent-light);font-size:1em;margin:0 0 10px 0;text-transform:uppercase;letter-spacing:.5px}
+.intro-section p{color:var(--txt);font-size:13px;line-height:1.6;margin:0}
+.intro-section ul{margin:8px 0 0 0;padding-left:20px;color:var(--txt);font-size:13px;line-height:1.8}
+.intro-section code{background:var(--panel2);padding:2px 6px;border-radius:3px;font-size:12px;font-family:ui-monospace,Consolas,monospace}
+.intro-help{margin-top:15px;padding:12px;background:rgba(182,22,22,.1);border-left:3px solid var(--accent);border-radius:4px;font-size:13px;color:var(--txt)}
+.intro-help strong{color:var(--accent-light)}
 </style>
 </head>
 <body>
@@ -247,6 +263,7 @@ pre.code::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radiu
   <div class="grow"></div>
   <span id="elapsed" class="pill">0.0s</span>
   <span id="prog" class="pill">0/0</span>
+  <button id="help-btn" class="icon-btn" title="Show help">?</button>
   <button id="theme-toggle" class="icon-btn" title="Toggle theme">&#9789;</button>
   <button id="run" class="primary">&#9654; Run</button>
 </header>
@@ -264,6 +281,56 @@ pre.code::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radiu
     <div id="cost-summary" class="content" title="">—</div>
   </div>
 </div>
+
+<div id="intro-panel" class="intro-panel show">
+  <div class="intro-content">
+    <div class="intro-header">
+      <h2>🔮 LLMGraph Runtime Monitor</h2>
+      <button class="intro-close" id="intro-close">&times;</button>
+    </div>
+    <p style="color:var(--muted);font-size:14px;margin:0">
+      Wolfram LLMGraph 编程模型的 LangGraph 运行时 - 实时可视化 LLM 工作流执行
+    </p>
+    <div class="intro-grid">
+      <div class="intro-section">
+        <h3>📊 这是什么</h3>
+        <p>实时监控界面，展示 LLMGraph 的执行过程。支持声明式图定义、自动依赖推断、并发调度。</p>
+      </div>
+      <div class="intro-section">
+        <h3>🎯 主要功能</h3>
+        <ul>
+          <li>实时节点状态可视化</li>
+          <li>流式 token 显示</li>
+          <li>成本估算（USD）</li>
+          <li>多运行对比</li>
+          <li>SVG 缩放/平移</li>
+        </ul>
+      </div>
+      <div class="intro-section">
+        <h3>🚀 快速开始</h3>
+        <ul>
+          <li>选择左侧 Notebook</li>
+          <li>在 Input JSON 填写参数</li>
+          <li>点击 <code>▶ Run</code> 执行</li>
+          <li>观察节点逐个亮起</li>
+        </ul>
+      </div>
+      <div class="intro-section">
+        <h3>⌨️ 快捷键</h3>
+        <ul>
+          <li><code>Ctrl+Enter</code> - 运行图</li>
+          <li><code>Esc</code> - 取消选择节点</li>
+          <li>鼠标滚轮 - 缩放画布</li>
+          <li>拖拽空白区 - 平移画布</li>
+        </ul>
+      </div>
+    </div>
+    <div class="intro-help">
+      <strong>💡 提示：</strong> 首次使用？点击任意节点查看详情，在 History 中选择历史运行，或勾选多个运行进行对比。点击右上角 <code>?</code> 可随时重新打开此介绍。
+    </div>
+  </div>
+</div>
+
 <main>
   <div id="canvasWrap">
     <div class="tabs">
@@ -461,6 +528,23 @@ $("theme-toggle").addEventListener("click",()=>{
     $("theme-toggle").innerHTML=saved==="dark"?"&#9789;":"&#9788;";
   }
 })();
+
+$("help-btn").addEventListener("click",()=>{
+  $("intro-panel").classList.add("show");
+});
+$("intro-close").addEventListener("click",()=>{
+  $("intro-panel").classList.remove("show");
+});
+(function checkFirstVisit(){
+  if(!localStorage.getItem("llmgraph-intro-dismissed")){
+    $("intro-panel").classList.add("show");
+  }else{
+    $("intro-panel").classList.remove("show");
+  }
+})();
+$("intro-close").addEventListener("click",()=>{
+  localStorage.setItem("llmgraph-intro-dismissed","true");
+},{once:true});
 
 let inputDebounce=null;
 $("input").addEventListener("input",()=>{
