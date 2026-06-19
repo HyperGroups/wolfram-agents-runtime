@@ -1,0 +1,12 @@
+{
+  "_source": "LLMGraph reference page, Scope > ListableLLMFunction + aggregation: summarize each document in parallel, then combine summaries. Unlocked by P0-1.",
+  "_kind": "llm — structure parity + side-by-side outputs",
+  "nodes": {
+    "Summaries": {
+      "listable_llm": "Summarize this text in one sentence: `documents`",
+      "input": ["documents"]
+    },
+    "Combined": "Combine these summaries into a single coherent summary:\n\n`Summaries`"
+  },
+  "output": ["Combined"]
+}

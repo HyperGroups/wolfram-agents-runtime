@@ -1,0 +1,8 @@
+{
+  "_source": "LLMGraph reference page, Applications (cell 94): poem = LLMGraph[<|\"Haiku\" -> \"write a haiku about `Topic`\", \"Restyle\" -> (ToUpperCase[#Haiku] &)|>]. An LLM node feeding a deterministic Wolfram-code transform.",
+  "_kind": "mixed LLM -> Wolfram-code — structure parity exact; Restyle value depends on the (non-deterministic) Haiku node, so it is shown, not asserted",
+  "nodes": {
+    "Haiku": "write a haiku about `Topic`",
+    "Restyle": {"wolfram": "ToUpperCase[deps[\"Haiku\"]]", "input": ["Haiku"]}
+  }
+}

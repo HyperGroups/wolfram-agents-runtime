@@ -1,0 +1,8 @@
+{
+  "nodes": {
+    "nums": {"wolfram": "Range[deps[\"k\"]]", "input": ["k"]},
+    "total": {"wolfram": "Total[deps[\"nums\"]]", "input": ["nums"]},
+    "summary": "In one sentence, describe the list `nums` whose elements sum to `total`."
+  },
+  "output": ["summary"]
+}

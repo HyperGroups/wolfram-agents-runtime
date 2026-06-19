@@ -1,0 +1,8 @@
+{
+  "nodes": {
+    "Poet1": "write a short poem about summer",
+    "Poet2": "write a haiku about winter",
+    "Judge": "Choose the best composition among these:\n\n1) Poem1: `Poet1`\n\n2) Poem2: `Poet2`\n\nand copy it:"
+  },
+  "output": ["Judge"]
+}

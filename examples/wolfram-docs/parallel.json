@@ -1,0 +1,11 @@
+{
+  "_source": "LLMGraph reference page, Scope > ListableLLMFunction: maps an LLM call over each element of a list input in parallel. Unlocked by P0-1.",
+  "_kind": "llm — structure parity + side-by-side outputs",
+  "nodes": {
+    "Translated": {
+      "listable_llm": "Translate `words` to French. Reply with just the translation, nothing else.",
+      "input": ["words"]
+    }
+  },
+  "output": ["Translated"]
+}

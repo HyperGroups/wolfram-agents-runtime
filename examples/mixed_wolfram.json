@@ -1,0 +1,11 @@
+{
+  "nodes": {
+    "haiku": "Write a haiku about `Topic`. Plain text only, no preamble.",
+    "chars": {
+      "wolfram": "StringLength[deps[\"haiku\"]]",
+      "input": ["haiku"]
+    },
+    "report": "Here is a haiku:\n\n`haiku`\n\nA Wolfram kernel measured it at exactly `chars` characters. In one sentence, comment on its concision."
+  },
+  "output": ["report"]
+}

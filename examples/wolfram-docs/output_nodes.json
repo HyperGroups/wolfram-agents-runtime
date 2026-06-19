@@ -1,0 +1,10 @@
+{
+  "_source": "LLMGraph reference page, Scope (cells 21-29): the canonical OutputNode1 / MiddleNode / OutputNode2 graph with constant EvaluationFunctions and inputs Arg1, Arg2. Reproduces dependency inference, fan-out, chaining, and multiple outputs deterministically.",
+  "_kind": "deterministic DAG — exact bidirectional value parity on every node, no LLM/network needed. Also exercises an intermediate override, e.g. --input {\"OutputNode1\":\"custom result\",\"Arg2\":2}",
+  "nodes": {
+    "OutputNode1": {"wolfram": "\"Output node 1 result\"", "input": ["Arg1"]},
+    "MiddleNode":  {"wolfram": "\"intermediate result\"",  "input": ["Arg2"]},
+    "OutputNode2": {"wolfram": "\"Output node 2 result\"", "input": ["MiddleNode"]}
+  },
+  "output": ["OutputNode1", "OutputNode2"]
+}

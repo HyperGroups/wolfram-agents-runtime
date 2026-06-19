@@ -1,0 +1,24 @@
+{
+  "_source": "Wolfram LLMGraph CorrectWorkflow example - error detection and correction pipeline",
+  "_description": "Decide if input has errors -> Review (if errors) -> Rewrite (if reviewed) -> Final output",
+  "nodes": {
+    "Decide": "Decide if the following contains errors. Respond with either 'Correct' or 'Errors':\n\n`Input`",
+    
+    "Review": {
+      "prompt": "List any errors in the following:\n\n`Input`",
+      "test": "lambda Decide: 'Errors' in str(Decide)",
+      "test_input": ["Decide"]
+    },
+    
+    "Rewrite": {
+      "prompt": "Rewrite the following text to fix any issues specified in the critique:\n\n=== Text ===\n`Input`\n\n=== Critique ===\n`Review`\n",
+      "test": "lambda Review: isinstance(Review, str) and len(Review) > 0",
+      "test_input": ["Review"]
+    },
+    
+    "Final": {
+      "fn": "lambda Rewrite, Input: f'Incorrect input:\\n{Input}\\nhas been rewritten as:\\n{Rewrite}' if isinstance(Rewrite, str) and len(Rewrite) > 0 else str(Input)",
+      "input": ["Rewrite", "Input"]
+    }
+  }
+}

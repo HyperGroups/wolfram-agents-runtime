@@ -1,0 +1,7 @@
+{
+  "_source": "LLMGraph reference page, Scope > 'Wolfram Code nodes' (cell 15-16): LLMGraph[<|\"WolframCode\" -> <|\"EvaluationFunction\" -> (2*#Argument &), \"Input\" -> {\"Argument\"}|>|>]",
+  "_kind": "deterministic — exact bidirectional value parity, no LLM/network needed",
+  "nodes": {
+    "WolframCode": {"wolfram": "2*deps[\"Argument\"]", "input": ["Argument"]}
+  }
+}

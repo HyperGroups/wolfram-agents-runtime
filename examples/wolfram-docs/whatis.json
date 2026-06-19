@@ -1,0 +1,7 @@
+{
+  "_source": "LLMGraph reference page, Scope > 'LLMSubmission' node forms (cells 8-11): the spec <|\"LLMSubmission\" -> LLMFunction[\"what is `Argument`?\"]|> and its StringTemplate / plain-string variants all collapse to one LLM node taking input `Argument`.",
+  "_kind": "string-LLM — structure parity (1 node, 1 input); output shown side-by-side",
+  "nodes": {
+    "LLMSubmission": "what is `Argument`?"
+  }
+}

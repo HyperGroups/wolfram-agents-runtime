@@ -1,0 +1,7 @@
+{
+  "nodes": {
+    "haiku": "generate a haiku about `Topic`.",
+    "complete": "add an extra stanza to the hokku `haiku` to make it a renga."
+  },
+  "output": ["complete"]
+}

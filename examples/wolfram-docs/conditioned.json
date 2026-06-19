@@ -1,0 +1,11 @@
+{
+  "_source": "LLMGraph reference page, Scope > Conditional nodes (cells 17-19): LLMGraph[<|\"ConditionalNode\" -> <|\"EvaluationFunction\" -> (... &), \"TestFunction\" -> (TrueQ[#NodeControl] &), \"InputTestFunction\" -> {\"NodeControl\"}|>|>]",
+  "_kind": "deterministic conditional — exact bidirectional parity, local, no key. test true -> the node runs; test false -> Missing[CanceledNode, ConditionalNode] (node skipped but still in results).",
+  "nodes": {
+    "ConditionalNode": {
+      "wolfram": "\"NodeHasRun\"",
+      "test": "TrueQ[deps[\"NodeControl\"]]",
+      "test_input": ["NodeControl"]
+    }
+  }
+}
