@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LLMGraph · Demo - Best Poem Example</title>
+<style>
+:root,[data-theme="dark"]{
+  --bg:#1a1a1a;--panel:#242424;--panel2:#2e2e2e;--line:#3a3a3a;--txt:#f5f5f5;--muted:#a0a0a0;
+  --pending:#4a4a4a;--running:#d62b2b;--done:#2e7d32;--canceled:#f9a825;
+  --skipped:#757575;--error:#c62828;
+  --llm:#8e24aa;--fn:#1976d2;--wolfram:#e65100;--listable:#00897b;--start:#2e7d32;--end:#8e24aa;
+  --accent:#b61616;--accent-light:#d62b2b;
+  --canvas-bg:radial-gradient(circle at 50% 50%,#242424 0%,#1a1a1a 100%);
+  --scrollbar-track:#242424;--scrollbar-thumb:#3a3a3a;
+  --input-bg:#1a1a1a;--code-bg:#1a1a1a;
+  --overlay:rgba(0,0,0,.5);
+}
+[data-theme="light"]{
+  --bg:#f5f5f5;--panel:#ffffff;--panel2:#f0f0f0;--line:#d0d0d0;--txt:#1a1a1a;--muted:#666666;
+  --pending:#cccccc;--running:#d62b2b;--done:#2e7d32;--canceled:#e6a100;
+  --skipped:#999999;--error:#c62828;
+  --llm:#7b1fa2;--fn:#1565c0;--wolfram:#e65100;--listable:#00796b;--start:#2e7d32;--end:#7b1fa2;
+  --accent:#b61616;--accent-light:#d62b2b;
+  --canvas-bg:radial-gradient(circle at 50% 50%,#e8e8e8 0%,#f5f5f5 100%);
+  --scrollbar-track:#f0f0f0;--scrollbar-thumb:#c0c0c0;
+  --input-bg:#ffffff;--code-bg:#f8f8f8;
+  --overlay:rgba(0,0,0,.2);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);transition:background .2s,color .2s}
+
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);box-shadow:0 1px 3px var(--overlay);flex-wrap:wrap}
+header h1{font-size:16px;margin:0;font-weight:650;display:flex;align-items:center;gap:8px;font-family:'Source Sans Pro',sans-serif;letter-spacing:.5px}
+header h1::before{content:"\2139";font-size:20px;color:var(--accent);font-weight:bold;font-family:serif}
+header .sub{color:var(--muted);font-size:12px;font-weight:400}
+.grow{flex:1}
+.pill{padding:4px 12px;border-radius:999px;font-size:12px;font-weight:500;border:1px solid var(--line);background:var(--panel2);white-space:nowrap}
+.pill.done{color:var(--done);border-color:var(--done)}
+
+.icon-btn{background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:4px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all .15s;padding:0}
+.icon-btn:hover{color:var(--txt);border-color:var(--accent);background:var(--panel)}
+
+main{display:grid;grid-template-columns:1fr 380px;height:calc(100vh - 57px - 97px)}
+
+#canvasWrap{position:relative;overflow:hidden;display:flex;flex-direction:column;background:var(--bg)}
+.tabs{display:flex;gap:8px;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel);align-items:center}
+.tab{font-size:13px;padding:6px 14px;border-radius:4px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer;transition:all .15s;font-weight:500;text-transform:uppercase;letter-spacing:.3px}
+.tab.active{color:var(--txt);border-color:var(--accent);background:rgba(182,22,22,.15);border-bottom:2px solid var(--accent)}
+.tab small{color:var(--muted);font-weight:400;margin-left:4px}
+
+#canvas{flex:1;overflow:hidden;background:var(--canvas-bg);position:relative}
+#canvas svg{position:absolute;top:0;left:0}
+
+aside{border-left:1px solid var(--line);background:var(--panel);overflow-y:auto;display:flex;flex-direction:column;border-top:3px solid var(--accent)}
+aside::-webkit-scrollbar{width:8px}
+aside::-webkit-scrollbar-track{background:var(--scrollbar-track)}
+aside::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:4px}
+
+.section{padding:14px 16px;border-bottom:1px solid var(--line)}
+.section:last-child{border-bottom:0}
+.section h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent-light);margin:0 0 10px;font-weight:600;border-bottom:1px solid var(--line);padding-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+
+.bar{height:10px;background:#21262d;border-radius:6px;overflow:hidden;margin:8px 0}
+[data-theme="light"] .bar{background:#e0e0e0}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-light));width:100%;transition:width .3s ease}
+
+.row{display:flex;justify-content:space-between;gap:12px;margin:6px 0;font-size:13px}
+.row .label{color:var(--muted)}
+.row .value{font-weight:500}
+
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+.legend span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 4px rgba(0,0,0,.3)}
+
+pre.code{white-space:pre-wrap;word-break:break-all;background:var(--code-bg);border:1px solid var(--line);border-radius:6px;
+  padding:10px;font:12px ui-monospace,Consolas,monospace;max-height:280px;overflow:auto;line-height:1.6;position:relative}
+pre.code::-webkit-scrollbar{width:8px}
+pre.code::-webkit-scrollbar-track{background:var(--scrollbar-track)}
+pre.code::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:4px}
+
+.copy-btn{background:var(--panel2);border:1px solid var(--line);padding:3px 8px;font-size:11px;border-radius:4px;cursor:pointer;transition:all .15s;color:var(--muted)}
+.copy-btn:hover{background:var(--line);border-color:var(--accent);color:var(--txt)}
+.copy-btn.copied{color:var(--done);border-color:var(--done)}
+
+.summary-bar{display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);border-left:3px solid var(--accent)}
+.summary-item{flex:1;min-width:0}
+.summary-item .label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.summary-item .content{font-size:13px;color:var(--txt);background:var(--input-bg);padding:8px 10px;border-radius:6px;border:1px solid var(--line);max-height:72px;overflow:auto;line-height:1.5;cursor:default;position:relative}
+.summary-item .content::-webkit-scrollbar{width:6px}
+.summary-item .content::-webkit-scrollbar-track{background:var(--scrollbar-track)}
+.summary-item .content::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:3px}
+
+.node rect{stroke:var(--line);stroke-width:2;fill:var(--panel);transition:all .2s}
+.node text.nm{fill:var(--txt);font-weight:600;font-size:13px}
+.node text.kd{font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.node .sdot{transition:all .2s}
+.node.sel rect{stroke:var(--accent);stroke-width:3;filter:drop-shadow(0 0 8px rgba(182,22,22,.5))}
+.node.done rect{stroke:var(--done)}
+.node:hover rect{stroke:var(--accent);stroke-width:2.5}
+
+.edge{fill:none;stroke:#3d444d;stroke-width:2;marker-end:url(#arrow);transition:stroke .2s}
+[data-theme="light"] .edge{stroke:#b0b0b0}
+
+.timeline{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:240px;overflow-y:auto}
+.timeline::-webkit-scrollbar{width:6px}
+.timeline::-webkit-scrollbar-track{background:var(--scrollbar-track)}
+.timeline::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:3px}
+.timeline-item{display:flex;gap:10px;align-items:flex-start;font-size:12px}
+.timeline-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.timeline-content{flex:1;min-width:0}
+.timeline-content .name{font-weight:600;margin-bottom:1px}
+.timeline-content .meta{color:var(--muted);font-size:11px}
+
+.demo-badge{background:var(--accent);color:#fff;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+
+@media(max-width:1024px){
+  main{grid-template-columns:1fr}
+  aside{border-left:0;border-top:1px solid var(--line);max-height:50vh}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>LLMGraph</h1><span class="sub">Runtime Monitor</span>
+  <span class="demo-badge">Static Demo</span>
+  <span class="pill done">● completed</span>
+  <div class="grow"></div>
+  <span class="pill">17.0s</span>
+  <span class="pill">3/3</span>
+  <button id="theme-toggle" class="icon-btn" title="Toggle theme">&#9789;</button>
+</header>
+<div class="summary-bar">
+  <div class="summary-item">
+    <div class="label">Input</div>
+    <div class="content">{}</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">Output</div>
+    <div class="content">Judge: The best composition is **Poem 1: "Summer's Alchemy"**—by a wide margin...</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">Cost</div>
+    <div class="content">$0.00 (claude-cli - subscription)</div>
+  </div>
+</div>
+<main>
+  <div id="canvasWrap">
+    <div class="tabs">
+      <div class="tab active">LLMGraph <small>&middot; semantic</small></div>
+    </div>
+    <div id="canvas">
+      <svg id="svg" xmlns="http://www.w3.org/2000/svg" width="820" height="320">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" fill="#3d444d"/>
+          </marker>
+        </defs>
+        <g id="viewport">
+          <!-- Edges -->
+          <path class="edge" d="M260 88 C 390 88, 390 88, 520 88" marker-end="url(#arrow)"/>
+          <path class="edge" d="M260 208 C 390 208, 390 88, 520 88" marker-end="url(#arrow)"/>
+          
+          <!-- Poet1 Node -->
+          <g class="node done" transform="translate(60,60)" style="cursor:pointer">
+            <rect width="200" height="56" rx="10"/>
+            <rect x="3" y="10" width="5" height="36" rx="2" fill="var(--llm)"/>
+            <circle class="sdot" cx="22" cy="28" r="6" fill="var(--done)"/>
+            <text class="nm" x="40" y="22">Poet1</text>
+            <text class="kd" x="40" y="40" fill="var(--llm)">llm · output</text>
+          </g>
+          
+          <!-- Poet2 Node -->
+          <g class="node done" transform="translate(60,180)" style="cursor:pointer">
+            <rect width="200" height="56" rx="10"/>
+            <rect x="3" y="10" width="5" height="36" rx="2" fill="var(--llm)"/>
+            <circle class="sdot" cx="22" cy="28" r="6" fill="var(--done)"/>
+            <text class="nm" x="40" y="22">Poet2</text>
+            <text class="kd" x="40" y="40" fill="var(--llm)">llm · output</text>
+          </g>
+          
+          <!-- Judge Node -->
+          <g class="node done sel" transform="translate(520,60)" style="cursor:pointer">
+            <rect width="200" height="56" rx="10"/>
+            <rect x="3" y="10" width="5" height="36" rx="2" fill="var(--llm)"/>
+            <circle class="sdot" cx="22" cy="28" r="6" fill="var(--done)"/>
+            <text class="nm" x="40" y="22">Judge</text>
+            <text class="kd" x="40" y="40" fill="var(--llm)">llm · output</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <aside>
+    <div class="section">
+      <h3>Progress</h3>
+      <div class="bar"><i></i></div>
+      <div class="row"><span class="label">status</span><b class="value" style="color:var(--done)">done</b></div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--done)"></i>done</span>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h3>Example Info</h3>
+      <p style="font-size:13px;color:var(--txt);line-height:1.6;margin:0">
+        <strong>Best Poem</strong> - Two poets write poems in parallel, then a judge selects the best one.
+        Demonstrates fan-in dependencies and concurrent LLM execution.
+      </p>
+    </div>
+    
+    <div class="section" style="flex:1;display:flex;flex-direction:column">
+      <h3>Node Detail - Judge</h3>
+      <div class="row"><span class="label">status</span><span class="value" style="color:var(--done)">done</span></div>
+      <div class="row"><span class="label">kind</span><span class="value">llm</span></div>
+      <div class="row"><span class="label">deps</span><span class="value">Poet1, Poet2</span></div>
+      <div class="row"><span class="label">duration</span><span class="value">10.564s</span></div>
+      <div class="row"><span class="label">tokens</span><span class="value">input: 254 · output: 448 · total: 702</span></div>
+      <h3 style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">Output <button class="copy-btn" onclick="copyOutput(this)">copy</button></h3>
+      <pre class="code" id="output-content">The best composition is **Poem 1: "Summer's Alchemy"**—by a wide margin.
+
+Here's why:
+
+✅ **Richness & Craft**: Poem 1 demonstrates masterful poetic technique—vivid, original imagery ("a molten coin the sky repeats," "cicadas stitch the humid air"), precise sensory layering (taste of limeade, heat of pavement, sound of grasshoppers, visual glow of fireflies), rhythmic control, and resonant enjambment and punctuation. Its language is both musical and muscular.
+
+✅ **Thematic Depth & Resolution**: It moves beyond mere description to explore time, memory, and summer's paradoxical nature—ephemeral yet enduring ("Not gone—but held, in memory's keep: / A golden promise, deep and sweet"). The closing lines elevate the poem into lyrical meditation.
+
+✅ **Cohesion & Arc**: It builds deliberately—opening with light and sound, deepening into bodily sensation and natural vitality, then expanding into philosophical reflection. The repetition of *burns*, *blooms*, *blazes* creates a powerful tricolon climax before the tender, anchoring resolution.
+
+❌ Poem 2, while evocative as a haiku-like fragment, is extremely minimal (only three lines) and lacks development, structure, or thematic resonance beyond a fleeting winter image. It reads like a notebook jotting—not a complete, realized composition. As written, it has no title, no internal rhyme or rhythm beyond brevity, and no expansion of its implied mood or meaning. It's atmospheric but incomplete.
+
+💡 Note: Poem 2 *could* be a strong opening line or epigraph—but as presented, it's not a standalone poem on par with Poem 1's ambition, execution, or emotional scope.
+
+**Verdict**: "Summer's Alchemy" is an accomplished, immersive, and memorable lyric poem—lyrical, intelligent, and deeply felt. It's the clear and compelling choice.
+
+*(And yes — I've copied Poem 2 exactly as instructed:)*  
+Frost etches the pane—  
+bare branches sketch cold blue air—  
+steam rises from tea.</pre>
+    </div>
+    
+    <div class="section">
+      <h3>Execution Timeline</h3>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--done);box-shadow:0 0 6px var(--done)"></div>
+          <div class="timeline-content">
+            <div class="name">Judge</div>
+            <div class="meta">done · 10.56s · llm</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--done);box-shadow:0 0 6px var(--done)"></div>
+          <div class="timeline-content">
+            <div class="name">Poet1</div>
+            <div class="meta">done · 6.47s · llm</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--done);box-shadow:0 0 6px var(--done)"></div>
+          <div class="timeline-content">
+            <div class="name">Poet2</div>
+            <div class="meta">done · 3.93s · llm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<script>
+function copyOutput(btn){
+  const text=document.getElementById("output-content").textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent="copied!";btn.classList.add("copied");
+    setTimeout(()=>{btn.textContent="copy";btn.classList.remove("copied")},1500);
+  });
+}
+
+$("theme-toggle").addEventListener("click",()=>{
+  const html=document.documentElement;
+  const next=html.getAttribute("data-theme")==="dark"?"light":"dark";
+  html.setAttribute("data-theme",next);
+  $("theme-toggle").innerHTML=next==="dark"?"&#9789;":"&#9788;";
+  localStorage.setItem("llmgraph-theme",next);
+});
+(function loadTheme(){
+  const saved=localStorage.getItem("llmgraph-theme");
+  if(saved){
+    document.documentElement.setAttribute("data-theme",saved);
+    $("theme-toggle").innerHTML=saved==="dark"?"&#9789;":"&#9788;";
+  }
+})();
+
+function $(id){return document.getElementById(id)}
+</script>
+</body>
+</html>
