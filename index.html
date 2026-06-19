@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wolfram LLMGraph Runtime</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.3em;
+            opacity: 0.95;
+            margin-bottom: 30px;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .features {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .features h2 {
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2em;
+            text-align: center;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .feature-card {
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+        }
+        
+        .feature-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        
+        .feature-card p {
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        .quick-start {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .quick-start h2 {
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2em;
+            text-align: center;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        
+        .code-block .comment {
+            color: #718096;
+        }
+        
+        .code-block .keyword {
+            color: #63b3ed;
+        }
+        
+        .code-block .string {
+            color: #68d391;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: white;
+            opacity: 0.9;
+        }
+        
+        footer a {
+            color: white;
+            text-decoration: underline;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+            color: white;
+        }
+        
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            display: block;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            
+            .features, .quick-start {
+                padding: 25px;
+            }
+            
+            .stats {
+                gap: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔮 Wolfram LLMGraph Runtime</h1>
+            <p class="subtitle">Wolfram LLMGraph 编程模型的 LangGraph 瘦运行时实现</p>
+            <a href="http://127.0.0.1:8765" class="cta-button">🚀 启动在线演示</a>
+        </header>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-number">79</span>
+                <span class="stat-label">测试用例</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">6</span>
+                <span class="stat-label">LLM 后端</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">5</span>
+                <span class="stat-label">节点类型</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">100%</span>
+                <span class="stat-label">测试通过</span>
+            </div>
+        </div>
+        
+        <div class="features">
+            <h2>✨ 核心特性</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>🎯 声明式图定义</h3>
+                    <p>使用 JSON 或 Python API 定义 LLM 工作流，依赖自动推断，并发调度执行。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔌 多后端支持</h3>
+                    <p>支持 Anthropic Claude、OpenAI、Qwen、DeepSeek 等 6 个 LLM 后端，可混合使用。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📊 实时监控</h3>
+                    <p>Web 界面实时展示图执行过程，支持流式 token 显示、成本估算、多运行对比。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔄 失败传播</h3>
+                    <p>FailedNode 和 CanceledNode 自动传播到下游节点，独立的错误处理语义。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>⚡ ListableLLM</h3>
+                    <p>支持并行 map LLM 调用过列表输入，高效处理批量任务。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🎨 双引擎 Parity</h3>
+                    <p>与 Wolfram 原生 LLMGraph 双向验证，确保语义一致性。</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="quick-start">
+            <h2>🚀 快速开始</h2>
+            <div class="code-block">
+<span class="comment"># 安装依赖</span>
+<span class="keyword">cd</span> wolfram-agents-runtime
+<span class="keyword">uv</span> venv --python 3.12
+<span class="keyword">uv</span> pip install -e <span class="string">".[dev]"</span>
+
+<span class="comment"># 配置 API Key（任选其一）</span>
+<span class="keyword">export</span> ANTHROPIC_API_KEY=sk-ant-...
+<span class="keyword">export</span> DASHSCOPE_API_KEY=sk-...
+
+<span class="comment"># 启动监控界面</span>
+<span class="keyword">python</span> -m wolfram_llmgraph.cli serve examples/bestpoem.json --open
+            </div>
+            <p style="text-align: center; margin-top: 20px; color: #666;">
+                访问 <a href="http://127.0.0.1:8765" style="color: #667eea; font-weight: bold;">http://127.0.0.1:8765</a> 查看实时监控界面
+            </p>
+        </div>
+        
+        <div class="features">
+            <h2>📚 示例图集</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>Best Poem</h3>
+                    <p>双诗人竞争 + 评委模式，展示并行执行和 fan-in 依赖。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Renga</h3>
+                    <p>连句诗生成，展示链式依赖和条件节点。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>ListableLLM</h3>
+                    <p>批量翻译示例，展示并行 map 调用。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Wolfram Code</h3>
+                    <p>混合 LLM 和 Wolfram 计算节点，展示双引擎协作。</p>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>
+                <a href="https://github.com/HyperGroups/wolfram-agents-runtime">GitHub 仓库</a> |
+                <a href="https://github.com/HyperGroups/wolfram-agents-runtime/tree/main/docs">文档</a> |
+                <a href="http://127.0.0.1:8765">在线演示</a>
+            </p>
+            <p style="margin-top: 20px; font-size: 0.9em;">
+                Built with ❤️ using LangGraph + Wolfram Language semantics
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
