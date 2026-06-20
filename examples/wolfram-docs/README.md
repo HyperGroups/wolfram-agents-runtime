@@ -17,6 +17,8 @@ original, our IR, inferred structure, how to run, parity result).
 | `conditioned` | [conditioned.md](conditioned.md) · [.json](conditioned.json) | Scope, "Conditional nodes" (17–19) | a `ConditionalNode` gated by `TrueQ[#NodeControl]`; skipped → `Missing[CanceledNode, …]` | **det** — exact value parity (both branches), local |
 | `whatis` | [whatis.md](whatis.md) · [.json](whatis.json) | Scope, `LLMSubmission` forms (8–11) | a single LLM node `"what is \`Argument\`?"` (the `LLMFunction` / `StringTemplate` / string forms all collapse to this) | llm — structure parity |
 | `restyle` | [restyle.md](restyle.md) · [.json](restyle.json) | Applications (94) | LLM node `Haiku` feeding a deterministic `ToUpperCase` Wolfram-code node `Restyle` | llm — structure parity |
+| `parallel` | [parallel.md](parallel.md) · [.json](parallel.json) | Scope, `ListableLLMFunction` (12–14) | one LLM call threaded over each element of a list input, in parallel | llm — structure parity |
+| `summarize` | [summarize.md](summarize.md) · [.json](summarize.json) | Applications, Summarization (108–112) | map-reduce: `ListableLLMFunction` per-doc summaries → combine | llm — structure parity |
 
 The classic `bestpoem` (Poet1/Poet2/Judge) and `renga` (haiku/complete) examples
 — also straight from this doc page — live one level up in [`../bestpoem.json`](../bestpoem.json)

@@ -54,7 +54,8 @@ def _parse_prop(s: str | None) -> Any:
     """Map the ``--prop`` string to a graph property selector.
 
     ``auto`` -> None (output nodes); ``all`` -> "All"; ``Graph`` -> structure;
-    ``a,b`` -> a list of node names; anything else -> a single node name.
+    ``LLMGraph`` -> structure annotated with results; ``a,b`` -> a list of node
+    names; anything else -> a single node name.
     """
     if s is None or s in ("auto", "Automatic", "automatic"):
         return None
@@ -62,6 +63,8 @@ def _parse_prop(s: str | None) -> Any:
         return "All"
     if s in ("Graph", "graph"):
         return "Graph"
+    if s in ("LLMGraph", "llmgraph"):
+        return "LLMGraph"
     if "," in s:
         return [part.strip() for part in s.split(",") if part.strip()]
     return s
@@ -91,6 +94,23 @@ def _cmd_info(args: argparse.Namespace) -> int:
     info = graph.information()
     print(json.dumps(info, indent=2, ensure_ascii=False, default=str))
     return 0
+
+
+def _cmd_doctor(args: argparse.Namespace) -> int:
+    from .doctor import diagnose, fix, format_report
+
+    rep = diagnose()
+    if args.json:
+        print(json.dumps(rep, indent=2, ensure_ascii=False))
+    else:
+        print(format_report(rep))
+    if getattr(args, "fix", False):
+        print("\n--- fix ---")
+        for action in fix(rep):
+            print(f"  • {action}")
+        rep = diagnose()  # re-check after fixing
+    # exit non-zero when no backend is usable, so scripts/agents can branch on it
+    return 0 if rep["usable"] else 1
 
 
 def _cmd_serve(args: argparse.Namespace) -> int:
@@ -207,6 +227,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Manual mode: use exactly the specified backend, fail if credentials missing",
     )
     srv.set_defaults(func=_cmd_serve)
+
+    doc = sub.add_parser(
+        "doctor", help="Check the environment: backends, credentials, tools")
+    doc.add_argument("--json", action="store_true", help="emit the report as JSON")
+    doc.add_argument("--fix", action="store_true",
+                     help="guided setup: create .env, suggest/enter a key")
+    doc.set_defaults(func=_cmd_doctor)
 
     return p
 

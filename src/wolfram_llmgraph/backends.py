@@ -281,33 +281,52 @@ def resolve_backend(backend: str | None, strict: bool = False) -> str:
     return backend
 
 
-def make_llm(backend: str, model: str | None):
+def make_llm(backend: str, model: str | None, config: dict | None = None,
+             api_key: str | None = None):
     """Build a backend LLM object for ``backend`` and ``model``.
 
     ``model=None`` falls back to that backend's default (``BACKEND_DEFAULT_MODEL``).
+    ``config`` carries LLMConfiguration params (``temperature``/``max_tokens``/
+    ``stop``/``top_p``); ``api_key`` overrides the environment lookup
+    (Authentication option).
     """
     import os
 
+    config = config or {}
     m = model or BACKEND_DEFAULT_MODEL.get(backend)
+    temperature = config.get("temperature")
+    max_tokens = config.get("max_tokens", 4096)
+    stop = config.get("stop")
+    top_p = config.get("top_p")
+
+    def _opt(d):  # drop None-valued kwargs so provider defaults apply
+        return {k: v for k, v in d.items() if v is not None}
 
     if backend == "claude-cli":
-        return ClaudeCLI(m)
+        return ClaudeCLI(m)  # the CLI takes its own config; constructor opts n/a
 
     if backend == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
-        return ChatAnthropic(model=m, max_tokens=4096)
+        return ChatAnthropic(**_opt({
+            "model": m, "max_tokens": max_tokens, "temperature": temperature,
+            "stop": stop, "top_p": top_p, "api_key": api_key,
+        }))
 
     if backend in OPENAI_COMPAT:
         from langchain_openai import ChatOpenAI
 
         cfg = OPENAI_COMPAT[backend]
-        key = next((os.environ[n] for n in cfg["env"] if os.environ.get(n)), None)
+        key = api_key or next((os.environ[n] for n in cfg["env"] if os.environ.get(n)), None)
         if not key:
             raise RuntimeError(
                 f"{backend} backend needs one of {cfg['env']} in the environment"
             )
         base_url = os.environ.get(cfg.get("base_url_env", ""), cfg["base_url"])
-        return ChatOpenAI(model=m, api_key=key, base_url=base_url, max_tokens=4096)
+        return ChatOpenAI(**_opt({
+            "model": m, "api_key": key, "base_url": base_url,
+            "max_tokens": max_tokens, "temperature": temperature,
+            "stop": stop, "top_p": top_p,
+        }))
 
     raise ValueError(f"Unknown backend: {backend!r} (use one of {BACKENDS})")

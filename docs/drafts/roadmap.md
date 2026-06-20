@@ -1,7 +1,22 @@
 # 路线图(Roadmap)
 
-> 状态:草稿。最后更新:2026-06-19。
+> 状态:草稿。最后更新:2026-06-20。
 > **现状/已验证**已移至权威快照 [`../STATUS.md`](../STATUS.md);本文件只列**未来计划**。
+
+## 近期完成(2026-06-20)— 对照官方文档补齐
+
+> 对着 `LLMGraph.pdf` / `LLMGraphSubmit.pdf` / `LLMFunctions.pdf` 逐项补齐(各自分模块):
+
+- **`prop="LLMGraph"`**:结果标注图 + 部分形(依赖未满足只标注可求值子集)。
+- **裸值单输入** `g(val)`(对齐 `poem["winter"]`)。
+- **提示规格对照**(`prompts.py`):字符串列表 / `LLMPrompt` + `PromptLibrary` / `TemplateObject` / `Slot`。
+- **`LLMConfiguration`**:图级 `llm_config=` + 节点级 temperature/max_tokens/stop/top_p/system。
+- **`Authentication`**:`{"api_key"}` / `{"env":"VAR"}` / 默认环境。
+- **`Information(prop)`** 多形态:Properties / Nodes / Graph / LLMEvaluator。
+- **异步提交 `LLMGraphSubmit`**(`submit.py`,独立模块):`Task` + 全套 `HandlerFunctions` 事件
+  + `HandlerFunctionsKeys` + `target`。见 [`../design/07-llmgraphsubmit.md`](../design/07-llmgraphsubmit.md)。
+
+测试 79 → **101 passed**(新增提示/配置/认证/LLMGraph-prop/裸值/submit 共 22 例)。
 
 ## 近期完成(2026-06-19)
 
@@ -64,7 +79,7 @@
 
 ## 延后
 
-- `"LLMGraph"` 带结果属性的更多形态。
+- `Information` 的真 `Dataset`/`Graph` 对象形态(现返回 dict/结构)。
 - human-in-the-loop 交互节点。
 - 图版本管理 / diff / merge。
 

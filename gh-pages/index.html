@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>wolfram-agents-runtime — Wolfram LLM family, no Wolfram license</title>
+<meta name="description" content="An external, multi-provider, observable runtime for Wolfram's LLM family (LLMGraph, LLMGraphSubmit, LLMSynthesize, …). What it does — and what it doesn't (yet)." />
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --line:#30363d; --txt:#e6edf3; --muted:#8b949e;
+    --ok:#3fb950; --no:#f85149; --accent:#a78bfa; --accent2:#58a6ff; --code:#0b0f14;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.6 ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt)}
+  a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+  header{padding:56px 0 34px;border-bottom:1px solid var(--line);background:
+    radial-gradient(800px 300px at 30% -10%, rgba(167,139,250,.14), transparent)}
+  h1{font-size:34px;margin:0 0 6px;letter-spacing:.3px}
+  h1 .tag{color:var(--accent)}
+  .lede{color:var(--muted);font-size:18px;max-width:760px;margin:0 0 22px}
+  .pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+  .pill{font-size:13px;border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--muted)}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;font:13.5px ui-monospace,Consolas,monospace;line-height:1.7}
+  pre .c{color:var(--muted)} pre .k{color:var(--accent)}
+  section{padding:38px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:22px;margin:0 0 18px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:760px){.cols{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .card.can{border-top:3px solid var(--ok)} .card.cant{border-top:3px solid var(--no)}
+  .card h3{margin:0 0 12px;font-size:16px;display:flex;align-items:center;gap:8px}
+  .card.can h3{color:var(--ok)} .card.cant h3{color:var(--no)}
+  ul{margin:0;padding-left:0;list-style:none}
+  li{position:relative;padding:7px 0 7px 26px;border-top:1px solid var(--line);font-size:14.5px}
+  li:first-child{border-top:0}
+  .can li::before{content:"✓";position:absolute;left:2px;color:var(--ok);font-weight:700}
+  .cant li::before{content:"✕";position:absolute;left:2px;color:var(--no);font-weight:700}
+  li b{color:var(--txt)} li .m{color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .fam{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px}
+  .fam b{color:var(--accent)} .fam .m{color:var(--muted);font-size:13px}
+  footer{padding:30px 0 60px;color:var(--muted);font-size:14px}
+  .badge{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font:12px ui-monospace,monospace;color:var(--ok)}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>wolfram-<span class="tag">agents</span>-runtime</h1>
+    <p class="lede">An external, multi-provider, <b>observable</b> runtime for Wolfram's
+      <b>LLM family</b> (LLMGraph · LLMGraphSubmit · LLMSynthesize · LLMPrompt · …) —
+      <b>without a Wolfram license or Wolfram Cloud</b>. One agent-facing CLI; LLMGraph is one capability, not the whole thing.</p>
+    <div class="pills">
+      <span class="pill">no Wolfram license</span>
+      <span class="pill">6 LLM backends</span>
+      <span class="pill">no API key needed (claude-cli / Qwen)</span>
+      <span class="pill">live web monitor</span>
+      <span class="pill badge">131 offline tests green</span>
+    </div>
+<pre><span class="c"># a natural-language task → planned graph → result</span>
+<span class="k">wolfram_agents</span> do "summarize the pros &amp; cons of X and recommend one"
+<span class="c"># or: one-shot · orchestrated graphs · env self-check</span>
+<span class="k">wolfram_agents</span> synthesize "what has atomic number 2?"
+<span class="k">wolfram_agents</span> graph run examples/renga.json -i Topic=spring
+<span class="k">wolfram_agents</span> doctor --fix     <span class="c"># tells you exactly what's configured / how to finish</span></pre>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>What it does — and what it doesn't (yet)</h2>
+    <div class="cols">
+      <div class="card can">
+        <h3>✅ Solves today</h3>
+        <ul>
+          <li><b>LLMGraph model with zero Wolfram dependency</b> <span class="m">— auto deps + concurrency on plain Python/CI</span></li>
+          <li><b>Natural-language task → graph → result</b> <span class="m">— <code>wolfram_agents do "…"</code> has an LLM plan the task into an LLMGraph, then runs it (self-repairing, LLM nodes only)</span></li>
+          <li><b>Swappable execution engine</b> <span class="m">— same semantics on a zero-dep <code>reference</code> executor or LangGraph; LangGraph is detachable, proven equal by tests</span></li>
+          <li><b>No vendor lock-in, no Anthropic key</b> <span class="m">— 6 backends, per-node mix, <code>auto</code>; free via claude-cli / Qwen</span></li>
+          <li><b>LLM + Python + Wolfram-compute + conditional nodes</b> <span class="m">— one graph, with failure propagation</span></li>
+          <li><b>One-shot</b> (LLMSynthesize) <b>+ async events</b> <span class="m">(LLMGraphSubmit → Task)</span></li>
+          <li><b>See inside the pipeline</b> <span class="m">— live monitor, 2-layer DAG, per-node status / timing / tokens / cost</span></li>
+          <li><b>Migrate &amp; verify</b> <span class="m">— WL spec → IR, exact dual-engine parity on deterministic nodes</span></li>
+          <li><b>Agent-friendly setup</b> <span class="m">— <code>doctor --json --fix</code> + <code>setup.sh</code> / <code>setup.ps1</code> (Windows), offline-tolerant</span></li>
+        </ul>
+      </div>
+      <div class="card cant">
+        <h3>❌ Doesn't do (yet)</h3>
+        <ul>
+          <li><b>Not a production agent framework</b> <span class="m">— no tool-calling (LLMTool), no loops/state-machines, no checkpoint/memory</span></li>
+          <li><b>Not 100% Wolfram-compute migration</b> <span class="m">— heavy symbolic stays in Wolfram; <code>{"wolfram":…}</code> needs wolframscript</span></li>
+          <li><b>LLMConfiguration tools / SystemCredential auth</b> <span class="m">— not wired (WL-specific)</span></li>
+          <li><b>Information</b> returns dicts <span class="m">— not Wolfram Dataset/Graph objects</span></li>
+          <li><b>Streaming</b> stable on claude-cli only <span class="m">— LangChain-backend streaming pending</span></li>
+          <li><b>LLMGraphSubmit</b> <span class="m">— full-graph eval then slice; one run at a time per graph</span></li>
+          <li><b>Research / self-hosted</b> runtime <span class="m">— not a turnkey product</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>The LLM family, one CLI</h2>
+    <div class="grid">
+      <div class="fam"><b>do</b> <span class="m">(planner)</span><br><span class="m">NL task → graph → result</span><br><code>wolfram_agents do "…"</code></div>
+      <div class="fam"><b>LLMGraph / Submit</b><br><span class="m">graph orchestration + async</span><br><code>wolfram_agents graph …</code></div>
+      <div class="fam"><b>LLMSynthesize</b><br><span class="m">one-shot generation</span><br><code>wolfram_agents synthesize …</code></div>
+      <div class="fam"><b>LLMPrompt</b><br><span class="m">prompt library</span><br><code>wolfram_agents prompt list</code></div>
+      <div class="fam"><b>backends</b><br><span class="m">providers + credential status</span><br><code>wolfram_agents backends</code></div>
+      <div class="fam"><b>doctor</b><br><span class="m">env self-check / setup</span><br><code>wolfram_agents doctor --fix</code></div>
+    </div>
+    <p class="lede" style="margin-top:18px;font-size:15px">Two packages: <code>wolfram_llmgraph</code> (the LLMGraph library) and
+      <code>wolfram_agents</code> (the umbrella entry). Each family member is its own module — mirroring Wolfram's one-page-per-function family.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Full status &amp; per-feature comparison to Wolfram's docs: <code>docs/STATUS.md</code> ·
+    design notes: <code>docs/design/</code> · source &amp; README in the repository.
+    <br>Reproduces Wolfram's LLM family programming model; not affiliated with Wolfram Research.
+  </div>
+</footer>
+</body>
+</html>

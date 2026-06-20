@@ -112,8 +112,14 @@ llmgraph serve examples/wolfram-docs/output_nodes.json -i Arg1=1 -i Arg2=2   # �
 - `server.py` HTTP 单测 + 实跑 SSE:`run_start → node(running/done)×N → run_end` 事件流正确。
 - 不挂 monitor 时回归全绿(引擎无侵入)。
 
+## 已基于本事件流实现
+
+- **异步提交 `LLMGraphSubmit`** —— `submit.py` 把 monitor 事件翻译成 HandlerFunctions 事件,
+  返回 `Task`。见 [`07-llmgraphsubmit.md`](07-llmgraphsubmit.md)。
+- **流式 LLM token**(`claude-cli`):`astream()` → monitor `node_stream` 事件 → SSE → 前端实时显示。
+- **token 用量聚合 + 成本估算**(`MODEL_PRICING`,前端 summary bar)。
+
 ## 后续
 
-- 真异步(对接 `LLMGraphSubmit` 式句柄)+ 多并发运行(当前同一图实例一次一跑)。
-- token 用量聚合到图级 + 成本估算。
-- 流式 LLM token(节点内增量),对接[流式]路线项。
+- **多并发运行**:当前同一图实例一次一跑(借 monitor 槽位);并发需各自图实例。
+- LangChain backend(anthropic/openai)的流式路径与 monitor 同用时签名待统一(现仅 `claude-cli`)。

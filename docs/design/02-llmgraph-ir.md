@@ -50,7 +50,11 @@ IR 是项目的中枢:既是迁移目标格式,也是 Runtime 的输入。下面
 | `{"fn": callable, "input": [...]}` | 显式依赖的代码节点 | ✅(Python API) |
 | `{"wolfram": "<WL 代码>", "input": [...]}` | Wolfram 计算节点(子进程回调 Engine);代码用 `deps["name"]` 取依赖,缺省自动探测 | ✅ 计算层 |
 | `{..., "test": "<WL 或 callable>", "test_input": [...]}` | 条件节点(`ConditionalNode`):`test` 真才求值,否则 → `Missing[CanceledNode, name]`。任意节点可加 | ✅ |
-| `{"listable": true, "prompt": "..."}` | 对列表输入并行 thread | 🔲 |
+| `{"listable_llm": "...", "input": [...]}` | `ListableLLMFunction`:对列表输入并发 thread,输出恒为列表 | ✅ |
+| `["text1", "text2 \`Slot\`"]` / `{"prompt": [...]}` | 字符串列表提示(按 `PromptDelimiter` 拼接后模板化) | ✅ |
+| `{"llm_prompt": "name", "params": {...}}` | `LLMPrompt["name"]` 对照:从 `PromptLibrary`(本地 Prompt Repository)按名取 | ✅ |
+| `{"template_object": ["lit", {"slot":"X"}]}` | `TemplateObject` 对照:字面量 + Slot 组合成模板 | ✅ |
+| `{"prompt": "...", "temperature": .., "max_tokens": .., "stop": [..], "system": ".."}` | 节点级 `LLMConfiguration`(temperature/max_tokens/stop/top_p/system) | ✅ |
 
 ## 依赖推断规则 ✅
 
@@ -68,7 +72,7 @@ IR 是项目的中枢:既是迁移目标格式,也是 Runtime 的输入。下面
   - `None` / `"Automatic"` → 输出节点(单输出自动解包);
   - `"All"` → 所有节点结果;
   - `"Graph"` → 静态图结构;`"节点名"` → 单节点结果;`["a","b"]` → 仅这些节点。✅
-  - 🔲 `"LLMGraph"`(带**结果**的标注图)暂未实现(我们的 `"Graph"` 只给静态结构)。
+  - `"LLMGraph"` → 静态结构 **+ 结果标注**(`Results`/`Provided`);依赖未满足时只标注可求值子集(部分形)。✅ 对齐 PDF 基础/属性示例。
 
 ## 与 Wolfram `LLMGraph` 的对照
 
@@ -80,12 +84,15 @@ IR 是项目的中枢:既是迁移目标格式,也是 Runtime 的输入。下面
 | `"name" -> Function[...]`(纯 WL) | `{"wolfram": "..."}` 计算节点 | ✅ |
 | `<\|"EvaluationFunction"->...\|>` | `{"fn": ...}` / `{"wolfram": ...}` | ✅ |
 | `<\|"LLMFunction"->...\|>` | `{"prompt": ...}` | ✅ |
-| `<\|"ListableLLMFunction"->...\|>` | `{"listable": true, ...}` | 🔲 |
+| `<\|"ListableLLMFunction"->...\|>` | `{"listable_llm": "...", "input": [...]}` | ✅ |
 | `<\|"Input"->{...}\|>`(显式依赖) | `"input": [...]` | ✅ |
 | `<\|"TestFunction"->...,"InputTestFunction"->...\|>`(条件) | `{"test": ..., "test_input": [...]}` | ✅ |
-| `graph[in]` / `graph[in, All]` | `graph(in)` / `graph(in,"All")` | ✅ |
-| 选项 `LLMEvaluator`/`Authentication`(图级) | `model`/`backend`(图级) | ✅ |
-| 节点级 `LLMEvaluator`(per-node provider) | `{"prompt": "...", "model": "...", "backend": "..."}` | ✅ |
+| 提示 `{"t1","t2"}` / `LLMPrompt["n"]` / `TemplateObject[...]` / `StringTemplate` | 列表 / `{"llm_prompt"}` / `{"template_object"}` / 反引号槽 | ✅ 对照实现 |
+| `graph[in]`(单输入裸值)/ `graph[in, All]` | `graph(val)` / `graph(in,"All")` | ✅ |
+| `graph[in, "LLMGraph"]`(结果标注图,含部分形) | `graph(in, "LLMGraph")` → `Results`/`Provided` | ✅ |
+| 选项 `LLMEvaluator -> LLMConfiguration`(图级+节点级:temperature/max_tokens/stop/system) | `llm_config=` 图级 + 节点 `{...}` 覆盖 | ✅ |
+| 选项 `Authentication`(APIKey/Environment/SystemCredentialKey) | `authentication={"api_key"}`/`{"env":"VAR"}`/默认环境 | ◑(SystemCredential/ServiceObject 走环境回退) |
+| `Information[g,"Properties"/"Nodes"/"Graph"/"LLMEvaluator"]` | `g.information("Properties"/"Nodes"/"Graph"/"LLMEvaluator")` | ✅ |
 
 ## 超集扩展(LangGraph 带来、Wolfram 内核没有)
 

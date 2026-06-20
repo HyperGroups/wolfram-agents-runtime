@@ -16,6 +16,9 @@ This mirrors the programming model of Wolfram Language's ``LLMGraph``:
     - ``None`` / ``"Automatic"`` -> output nodes (single output is unwrapped),
     - ``"All"``                  -> every node's result,
     - ``"Graph"``                -> the static graph structure,
+    - ``"LLMGraph"``             -> the structure *annotated with the results*
+                                    (only the nodes whose dependencies were
+                                    satisfied are assigned a result),
     - ``"name"``                 -> that one node's result (unwrapped),
     - ``["a", "b", ...]``        -> an association of just those nodes.
 
@@ -40,6 +43,13 @@ import re
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Sequence
+
+from .prompts import (
+    PromptLibrary,
+    default_library,
+    is_prompt_spec,
+    normalize_prompt,
+)
 
 DEFAULT_MODEL = "claude-opus-4-8"
 
@@ -132,6 +142,9 @@ class Node:
     code: str | None = None  # for "wolfram" nodes
     model: str | None = None
     backend: str | None = None
+    # Per-node LLMConfiguration overrides (temperature/max_tokens/stop/system),
+    # merged over the graph-level ``llm_config`` (Wolfram's LLMEvaluator).
+    config: dict = field(default_factory=dict)
     deps: list[str] = field(default_factory=list)
     # Conditional node (Wolfram ConditionalNode): the node only evaluates when
     # ``test`` is truthy, else it yields CanceledNode. ``test`` is a WL code
@@ -171,10 +184,24 @@ def _attach_test(node: Node, test: Any, test_input: Any) -> None:
     node.test_deps = tdeps  # kept separate from eval deps; both wire the graph
 
 
-def parse_node(name: str, spec: Any) -> Node:
+_CONFIG_KEYS = ("temperature", "max_tokens", "stop", "system", "top_p")
+
+
+def _node_config_from_spec(spec: Mapping) -> dict:
+    return {k: spec[k] for k in _CONFIG_KEYS if k in spec}
+
+
+def parse_node(name: str, spec: Any, library: PromptLibrary | None = None) -> Node:
     """Turn a user-supplied node spec into a :class:`Node`."""
+    library = library or default_library()
+
     if isinstance(spec, str):
         return Node(name, "llm", template=spec, deps=_slots(spec))
+
+    # list of strings / LLMPrompt / TemplateObject as a bare node spec
+    if is_prompt_spec(spec) and not isinstance(spec, Mapping):
+        tmpl = normalize_prompt(spec, library)
+        return Node(name, "llm", template=tmpl, deps=_slots(tmpl))
 
     if callable(spec):
         return Node(name, "fn", fn=spec, deps=_callable_params(spec))
@@ -182,6 +209,7 @@ def parse_node(name: str, spec: Any) -> Node:
     if isinstance(spec, Mapping):
         model = spec.get("model")
         backend = spec.get("backend")
+        config = _node_config_from_spec(spec)
         if "wolfram" in spec:
             code = spec["wolfram"]
             if not isinstance(code, str):
@@ -189,9 +217,7 @@ def parse_node(name: str, spec: Any) -> Node:
             deps = list(spec.get("input") or _wolfram_deps(code))
             node = Node(name, "wolfram", code=code, deps=deps)
         elif "listable_llm" in spec:
-            template = spec["listable_llm"]
-            if not isinstance(template, str):
-                raise TypeError(f"Node {name!r}: 'listable_llm' must be a prompt string")
+            template = normalize_prompt(spec["listable_llm"], library)
             deps = list(spec.get("input") or _slots(template))
             if not deps:
                 raise ValueError(
@@ -199,7 +225,7 @@ def parse_node(name: str, spec: Any) -> Node:
                 )
             node = Node(
                 name, "listable_llm", template=template,
-                model=model, backend=backend, deps=deps, list_inputs=deps,
+                model=model, backend=backend, config=config, deps=deps, list_inputs=deps,
             )
         elif "fn" in spec or "function" in spec:
             fn = spec.get("fn") or spec.get("function")
@@ -208,13 +234,18 @@ def parse_node(name: str, spec: Any) -> Node:
             deps = list(spec.get("input") or _callable_params(fn))
             node = Node(name, "fn", fn=fn, model=model, backend=backend, deps=deps)
         else:
-            template = spec.get("prompt") or spec.get("llm") or spec.get("template")
-            if template is None:
+            raw = spec.get("prompt") or spec.get("llm") or spec.get("template")
+            if raw is None and ("llm_prompt" in spec or "template_object" in spec):
+                raw = spec  # _from_json picks up llm_prompt / template_object
+            if raw is None:
                 raise ValueError(
-                    f"Node {name!r}: spec must contain 'prompt', 'listable_llm', or 'fn'"
+                    f"Node {name!r}: spec must contain 'prompt', 'listable_llm', "
+                    f"'llm_prompt', 'template_object', or 'fn'"
                 )
+            template = normalize_prompt(raw, library)
             deps = list(spec.get("input") or _slots(template))
-            node = Node(name, "llm", template=template, model=model, backend=backend, deps=deps)
+            node = Node(name, "llm", template=template, model=model,
+                        backend=backend, config=config, deps=deps)
 
         if spec.get("test") is not None:
             _attach_test(node, spec["test"], spec.get("test_input"))
@@ -251,6 +282,10 @@ class LLMGraph:
         llm_factory: Callable[[str], Any] | None = None,
         monitor: Any = None,
         speculative: bool = False,
+        llm_config: Mapping[str, Any] | None = None,
+        authentication: Any = None,
+        prompts: PromptLibrary | None = None,
+        executor: Any = None,
     ) -> None:
         if not nodes:
             raise ValueError("An LLMGraph needs at least one node")
@@ -259,18 +294,29 @@ class LLMGraph:
         self.model = model
         self.backend = resolve_backend(backend, strict=backend_strict)
         self.backend_strict = backend_strict
+        # LLMEvaluator: graph-level default LLMConfiguration (per-node overrides).
+        self.llm_config = dict(llm_config or {})
+        # Authentication option: None/"Environment" (env), {"api_key": ...},
+        # {"env": "VARNAME"} (Wolfram SystemCredentialKey analog).
+        self.authentication = authentication
+        # Prompt library (our Wolfram Prompt Repository counterpart for LLMPrompt).
+        self._prompt_library = prompts or default_library()
         self._llm_factory = llm_factory
         self._llms: dict[tuple[str | None, str | None], Any] = {}
         self._wolfram_compute = None
-        self._compiled = None
         # Observability: an optional RunMonitor receives node lifecycle events.
         self.monitor = monitor
         self._run_id: str | None = None
         # Execution mode: speculative (Wolfram) vs sequential
         self.speculative = speculative
+        # Executor port: which engine runs the plan — "langgraph" (default) or
+        # "reference" (zero-dep) or an Executor instance. The semantic core is
+        # executor-agnostic; superset features live only in the LangGraph one.
+        self.executor = executor
 
         self.nodes: dict[str, Node] = {
-            name: parse_node(name, spec) for name, spec in nodes.items()
+            name: parse_node(name, spec, self._prompt_library)
+            for name, spec in nodes.items()
         }
         self.node_names = set(self.nodes)
 
@@ -303,49 +349,60 @@ class LLMGraph:
             if o not in self.node_names:
                 raise ValueError(f"Output {o!r} is not a node")
 
-    # -- compilation -------------------------------------------------------
+    # -- planning ----------------------------------------------------------
 
-    def _state_schema(self):
-        # One channel per node/input so independent nodes can write
-        # concurrently (a single dict channel would force one write/superstep).
-        from typing import TypedDict
+    def _make_plan(self):
+        """Build the neutral :class:`~.executors.ExecutionPlan` for an Executor.
 
-        fields = {name: Any for name in self.node_names}
-        for arg in self.inputs:
-            fields[arg] = Any
-        fields[_PROVIDED_KEY] = Any
-        return TypedDict("LLMGraphState", fields, total=False)
+        Each node's runner is the executor-agnostic contract
+        ``async (state) -> {name: value}``; both executors drive these same
+        runners, differing only in scheduling.
+        """
+        from .executors import ExecutionPlan
 
-    def _build(self):
-        from langgraph.graph import END, START, StateGraph
+        return ExecutionPlan(
+            runners={nd.name: self._make_runner(nd) for nd in self.nodes.values()},
+            node_deps={nd.name: list(nd.node_deps) for nd in self.nodes.values()},
+            sinks=list(self.sinks),
+            state_fields=[*self.node_names, *self.inputs, _PROVIDED_KEY],
+        )
 
-        g = StateGraph(self._state_schema())
-        for nd in self.nodes.values():
-            g.add_node(nd.name, self._make_runner(nd))
+    def _node_config(self, nd: Node) -> dict:
+        """Effective LLMConfiguration: graph defaults overridden by the node."""
+        return {**self.llm_config, **nd.config}
 
-        for nd in self.nodes.values():
-            if nd.node_deps:
-                for d in nd.node_deps:
-                    g.add_edge(d, nd.name)  # fan-in: waits for every parent
-            else:
-                g.add_edge(START, nd.name)
+    def _auth_key(self) -> str | None:
+        """Resolve an explicit API key from the ``authentication`` option.
 
-        for sink in self.sinks:
-            g.add_edge(sink, END)
+        None / "Automatic" / "Environment" -> None (backend uses env). A mapping
+        ``{"api_key": ...}`` or ``{"env": "VARNAME"}`` supplies/locates the key.
+        SystemCredential / ServiceObject are WL-specific -> fall back to env.
+        """
+        a = self.authentication
+        if isinstance(a, Mapping):
+            if a.get("api_key"):
+                return a["api_key"]
+            if a.get("env"):
+                import os
 
-        return g.compile()
+                return os.environ.get(a["env"])
+        return None
 
-    def _llm(self, backend: str | None, model: str | None):
+    def _llm(self, backend: str | None, model: str | None, config: Mapping | None = None):
         b = backend or self.backend
         m = model or self.model
-        key = (b, m)
+        # only the constructor-level config affects the client object
+        cfg = {k: v for k, v in (config or {}).items()
+               if k in ("temperature", "max_tokens", "stop", "top_p")}
+        api_key = self._auth_key()
+        key = (b, m, repr(sorted(cfg.items())), api_key)
         if key not in self._llms:
             if self._llm_factory is not None:
                 self._llms[key] = self._llm_factory(m)
             else:
                 from .backends import make_llm
 
-                self._llms[key] = make_llm(b, m)
+                self._llms[key] = make_llm(b, m, config=cfg, api_key=api_key)
         return self._llms[key]
 
     def _wolfram(self):
@@ -448,11 +505,14 @@ class LLMGraph:
                 propagated = self._check_dep_failures(nd, state)
                 if propagated is not None:
                     return {nd.name: propagated}
+                cfg = self._node_config(nd)
                 prompt = _SLOT_RE.sub(
                     lambda m: str(state.get(m.group(1), "")), nd.template
                 )
-                llm = self._llm(nd.backend, nd.model)
-                
+                if cfg.get("system"):
+                    prompt = f"{cfg['system']}\n\n{prompt}"
+                llm = self._llm(nd.backend, nd.model, cfg)
+
                 if self.monitor is not None and hasattr(llm, "astream"):
                     try:
                         full_content = []
@@ -503,7 +563,8 @@ class LLMGraph:
                     )
                 n = lengths[0] if lengths else 0
                 results = [None] * n
-                llm = self._llm(nd.backend, nd.model)
+                cfg = self._node_config(nd)
+                llm = self._llm(nd.backend, nd.model, cfg)
                 model_name = nd.model or getattr(llm, "model", None) or getattr(llm, "model_name", None)
 
                 async def _one(idx: int):
@@ -513,6 +574,8 @@ class LLMGraph:
                     prompt = _SLOT_RE.sub(
                         lambda m: str(local_state.get(m.group(1), "")), nd.template
                     )
+                    if cfg.get("system"):
+                        prompt = f"{cfg['system']}\n\n{prompt}"
                     resp = await llm.ainvoke(prompt)
                     return resp
 
@@ -569,38 +632,87 @@ class LLMGraph:
 
     # -- evaluation --------------------------------------------------------
 
-    async def ainvoke(self, input: Mapping[str, Any] | None = None, prop: Any = None):
-        data = dict(input or {})
+    async def ainvoke(self, input: Any = None, prop: Any = None):
+        if input is None:
+            data: dict[str, Any] = {}
+        elif isinstance(input, Mapping):
+            data = dict(input)
+        else:
+            # a bare value for the single graph input (Wolfram: ``g[val]``)
+            if len(self.inputs) != 1:
+                raise ValueError(
+                    f"a bare input value requires exactly one graph input; this "
+                    f"graph's inputs are {self.inputs}. Pass a dict instead."
+                )
+            data = {self.inputs[0]: input}
         provided = {k for k in data if k in self.node_names}
         state = dict(data)
         state[_PROVIDED_KEY] = provided
 
-        if self._compiled is None:
-            self._compiled = self._build()
+        from .executors import get_executor
+
+        executor = get_executor(self.executor)
+        plan = self._make_plan()
 
         if self.monitor is not None:
             self._run_id = uuid.uuid4().hex[:12]
             self.monitor.start_run(self._run_id, self.information(), data)
             try:
-                final = await self._compiled.ainvoke(state)
+                final = await executor.run(plan, state)
             except Exception:
                 self.monitor.end_run(self._run_id, status="error")
                 raise
             self.monitor.end_run(self._run_id, status="done")
         else:
-            final = await self._compiled.ainvoke(state)
+            final = await executor.run(plan, state)
 
         final = {k: v for k, v in final.items() if not k.startswith("__")}
-        return self._select(final, prop)
+        return self._select(final, prop, data)
 
-    def __call__(self, input: Mapping[str, Any] | None = None, prop: Any = None):
+    def __call__(self, input: Any = None, prop: Any = None):
         return asyncio.run(self.ainvoke(input, prop))
 
-    def _select(self, final: dict, prop: Any):
+    def submit(self, input: Any = None, target: Any = "Automatic", *,
+               handlers: Any = None, handler_keys: Any = "Automatic"):
+        """Asynchronous evaluation — Wolfram ``LLMGraphSubmit``. Returns a Task."""
+        from .submit import LLMGraphSubmit
+
+        return LLMGraphSubmit(self, input, target,
+                              handlers=handlers, handler_keys=handler_keys)
+
+    def _evaluable(self, data: Mapping[str, Any]) -> set:
+        """Nodes whose dependencies are satisfied given the supplied ``data``.
+
+        A node is evaluable if it is itself provided (overridden), or every one
+        of its input-argument deps is supplied *and* every node-dep is itself
+        evaluable. Mirrors Wolfram's partial evaluation: with some inputs
+        missing, only a subset of nodes is assigned a result.
+        """
+        provided_inputs = {k for k in data if k in self.inputs}
+        provided_nodes = {k for k in data if k in self.node_names}
+        memo: dict[str, bool] = {}
+
+        def can(n: str) -> bool:
+            if n in memo:
+                return memo[n]
+            if n in provided_nodes:
+                memo[n] = True
+                return True
+            nd = self.nodes[n]
+            memo[n] = True  # guard cycles (DAG expected)
+            memo[n] = all(d in provided_inputs for d in nd.input_deps) and all(
+                can(d) for d in nd.node_deps
+            )
+            return memo[n]
+
+        return {n for n in self.nodes if can(n)}
+
+    def _select(self, final: dict, prop: Any, data: Mapping[str, Any] | None = None):
         # Property selection, mirroring Wolfram ``LLMGraph[...][input, prop]``:
         #   None / "Automatic"   -> output nodes (a single output is unwrapped)
         #   "All"                -> every node's result
         #   "Graph"              -> the static graph structure (information())
+        #   "LLMGraph"           -> structure annotated with results (partial-safe)
         #   "name"               -> that one node's result (unwrapped)
         #   ["a", "b", ...]      -> an association of just those nodes
         # Reserved keywords win over identically-named nodes, as in Wolfram.
@@ -613,12 +725,20 @@ class LLMGraph:
             return final
         if prop in ("Graph", "graph"):
             return self.information()
+        if prop in ("LLMGraph", "llmgraph"):
+            # the static structure annotated with the computed results; only the
+            # nodes whose dependencies were satisfied are assigned a result.
+            evaluable = self._evaluable(data or {})
+            info = self.information()
+            info["Results"] = {n: final.get(n) for n in self.nodes if n in evaluable}
+            info["Provided"] = dict(data or {})
+            return info
         if isinstance(prop, str):
             if prop in self.node_names:
                 return final.get(prop)
             raise ValueError(
-                f"Unknown property {prop!r}: use None, 'All', 'Graph', a node "
-                f"name, or a list of node names. Nodes: {sorted(self.node_names)}"
+                f"Unknown property {prop!r}: use None, 'All', 'Graph', 'LLMGraph', "
+                f"a node name, or a list of node names. Nodes: {sorted(self.node_names)}"
             )
         if isinstance(prop, (list, tuple)):
             missing = [p for p in prop if p not in self.node_names]
@@ -628,15 +748,33 @@ class LLMGraph:
                 )
             return {p: final.get(p) for p in prop}
         raise ValueError(
-            f"Unknown property: {prop!r} (use None, 'All', 'Graph', a node "
-            f"name, or a list of node names)"
+            f"Unknown property: {prop!r} (use None, 'All', 'Graph', 'LLMGraph', "
+            f"a node name, or a list of node names)"
         )
 
     # -- introspection -----------------------------------------------------
 
-    def information(self) -> dict:
-        """Static graph info, analogous to ``Information[LLMGraph[...]]``."""
-        return {
+    def _fn_repr(self, nd: Node) -> str:
+        """Short representation of a node's evaluation function (for Information)."""
+        if nd.kind in ("llm", "listable_llm"):
+            return repr(nd.template)
+        if nd.kind == "wolfram":
+            return f"wolfram: {nd.code}"
+        if nd.kind == "fn":
+            return getattr(nd.fn, "__name__", "<callable>")
+        return "?"
+
+    def information(self, prop: Any = None) -> Any:
+        """Static graph info, analogous to ``Information[LLMGraph[...]]``.
+
+        ``prop`` mirrors Wolfram's ``Information`` properties:
+          - ``None``          -> the full summary dict (default),
+          - ``"Properties"``  -> the list of available properties,
+          - ``"Nodes"``       -> per-node {Kind, Input, Function} (the Dataset),
+          - ``"Graph"``       -> nodes + edges (the workflow graph),
+          - ``"LLMEvaluator"``-> the graph-level LLMConfiguration defaults.
+        """
+        base = {
             "Nodes": list(self.nodes),
             "Inputs": list(self.inputs),
             "Outputs": list(self.outputs),
@@ -653,14 +791,39 @@ class LLMGraph:
             ],
             "NodeKinds": {n: nd.kind for n, nd in self.nodes.items()},
         }
+        if prop is None:
+            return base
+        if prop in ("Properties", "properties"):
+            return ["Nodes", "Inputs", "Outputs", "Graph", "LLMEvaluator"]
+        if prop in ("Graph", "graph"):
+            return {
+                "nodes": base["Nodes"], "edges": base["Edges"],
+                "inputs": base["Inputs"], "outputs": base["Outputs"],
+            }
+        if prop in ("Nodes", "nodes"):
+            return {
+                n: {
+                    "Kind": nd.kind,
+                    "Input": nd.node_deps + nd.input_deps,
+                    "Function": self._fn_repr(nd),
+                }
+                for n, nd in self.nodes.items()
+            }
+        if prop in ("LLMEvaluator", "llmevaluator"):
+            return dict(self.llm_config)
+        raise ValueError(
+            f"Unknown Information property {prop!r}: use None, 'Properties', "
+            f"'Nodes', 'Graph', or 'LLMEvaluator'"
+        )
 
     def langgraph_structure(self) -> dict:
-        """The *compiled* LangGraph our runtime builds — the actual execution
-        graph (``__start__`` / ``__end__`` + fan-in edges), plus LangGraph's own
-        Mermaid export. This is the runtime layer beneath the LLMGraph layer."""
-        if self._compiled is None:
-            self._compiled = self._build()
-        g = self._compiled.get_graph()
+        """The *compiled* LangGraph for this graph — the actual execution graph
+        (``__start__`` / ``__end__`` + fan-in edges) + LangGraph's Mermaid export.
+        This is executor-specific (the LangGraph runtime layer); the semantic
+        layer is :meth:`information`."""
+        from .executors import LangGraphExecutor
+
+        g = LangGraphExecutor().compile(self._make_plan()).get_graph()
         out = {
             "nodes": list(g.nodes),
             "edges": [

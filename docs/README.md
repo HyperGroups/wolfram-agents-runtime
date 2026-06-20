@@ -1,6 +1,7 @@
 # 文档索引
 
-`wolfram-llmgraph` —— LLMGraph 的外部超集运行时 + 图模板迁移中枢。
+`wolfram-agents-runtime` —— Wolfram **LLM 家族**的外部运行时(`wolfram_agents` 主入口),
+`LLMGraph` 是其中一个能力组,非全部。见 [`design/08-agents-cli.md`](design/08-agents-cli.md)。
 
 > 📌 **当前进展看 [`STATUS.md`](STATUS.md)**(权威现状快照:能力清单、节点矩阵、
 > 测试与双向验证结果、已知缺口)。本页是文档导航与代码地图。
@@ -21,6 +22,9 @@
 | [03-wolfram-integration](design/03-wolfram-integration.md) | 交互通道全景(实测)、**LLM 鉴权三模式 + cloud-optional 原则**、MCP/CAG |
 | [05-dual-engine-parity](design/05-dual-engine-parity.md) | 双引擎并行验证(瘦引擎 vs Wolfram 原生)、parity 比对分层 |
 | [06-runtime-monitor](design/06-runtime-monitor.md) | 运行时监控:Wolfram 监控面实测 + 观测层 + 零依赖 HTTP/SSE 服务 + 前端 web 应用 |
+| [07-llmgraphsubmit](design/07-llmgraphsubmit.md) | 异步提交 `LLMGraphSubmit`(独立函数/模块):Task + HandlerFunctions 事件,架在 monitor 事件流上 |
+| [08-agents-cli](design/08-agents-cli.md) | **从 agents 出发的 CLI 主入口 `wolfram_agents`**:参照 LLM 家族指南,把 LLMGraph/Synthesize/Prompt/… 编成命令组,每成员独立模块 |
+| [09-executor-port](design/09-executor-port.md) | **Executor 端口**:语义核 + 可切换执行器(零依赖 Reference / LangGraph),把"超集=子集+可拆"做成内部 parity 测试契约 |
 
 ## 草稿 / 演进(docs/drafts)
 
@@ -32,14 +36,23 @@
 ## 代码与示例地图
 
 ```
-src/wolfram_llmgraph/      瘦引擎(库)
-  core.py                  LLMGraph 引擎:解析/依赖推断/编译 LangGraph/并发/属性/条件节点
-  backends.py              LLM 后端:anthropic · openai · claude-cli · qwen · qwen-tokenplan · deepseek(支持节点级切换)
+src/wolfram_llmgraph/      LLMGraph 库(家族成员各自一个模块)
+  core.py                  LLMGraph 语义核:解析/依赖推断/属性/条件/失败传播/产出 ExecutionPlan
+  executors.py             Executor 端口:ReferenceExecutor(零依赖)/ LangGraphExecutor / get_executor
+  backends.py              LLM 后端:anthropic · openai · claude-cli · qwen · qwen-tokenplan · deepseek(节点级可切)
   compute.py               Wolfram 计算节点:{"wolfram":"<WL>"} 经 wolframscript 子进程求值
   monitor.py               观测层:RunMonitor,节点生命周期事件 + 计时 + token 用量 + 订阅
+  prompts.py               提示规格对照:LLMPrompt / TemplateObject / Slot / PromptLibrary
+  submit.py                异步提交 LLMGraphSubmit:Task + HandlerFunctions 事件
+  synthesize.py            LLMSynthesize:一次性文本生成
+  planner.py               NL→图规划:plan_graph/run_task/check_runnable(`wolfram_agents do` 的实现)
+  loaders.py  cli.py       JSON 加载 · CLI(llmgraph run/info/serve/doctor,.env 自动加载)
   server.py                零依赖 HTTP+SSE 监控服务(/api/graph·state·events·run)
   webapp/index.html        前端单文件 web 应用:SVG DAG 实时着色 + 进度 + 详情 + 事件流
-  loaders.py  cli.py       JSON 加载 · CLI(run/info/serve,--backend,.env 自动加载)
+  doctor.py                环境自检:后端凭据/工具可用性(--json/--fix 供 agent)
+src/wolfram_agents/        ★ 伞包(系统入口,依赖 wolfram_llmgraph 库)
+  cli.py                   wolfram_agents 家族主入口(do/synthesize/graph/prompt/backends/doctor)
+  __init__.py              家族公开 API 门面(from wolfram_agents import LLMGraph, LLMSynthesize)
 tools/
   wlg2json.wls             转译器:Wolfram LLMGraph spec → IR JSON(无损子集)
   run_native.wls           在 Wolfram 原生 LLMGraph 上跑 IR(复用 llm.wls 的 ask[])
