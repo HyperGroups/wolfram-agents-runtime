@@ -29,7 +29,13 @@ from wolfram_llmgraph import (
     task_wait,
 )
 
-from .cli import main
+def __getattr__(name):  # PEP 562: lazy `main` so `python -m wolfram_agents.cli`
+    if name == "main":  # doesn't double-import cli at package load (no RuntimeWarning)
+        from .cli import main
+
+        return main
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     "LLMGraph",
