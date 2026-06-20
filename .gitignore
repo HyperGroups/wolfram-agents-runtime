@@ -8,3 +8,4 @@ build/
 .env
 *.generated.json
 .llmgraph_runs/
+graphs/

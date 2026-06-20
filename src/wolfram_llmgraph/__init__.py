@@ -30,6 +30,7 @@ from .executors import (
 from .planner import plan_graph, run_task
 from .submit import LLMGraphSubmit, Task, task_wait
 from .synthesize import LLMSynthesize
+from .wolfram_export import save_graph, slugify, to_wolfram
 
 __all__ = [
     "LLMGraph",
@@ -60,6 +61,9 @@ __all__ = [
     "get_executor",
     "plan_graph",
     "run_task",
+    "to_wolfram",
+    "save_graph",
+    "slugify",
 ]
 
 __version__ = "0.1.0"

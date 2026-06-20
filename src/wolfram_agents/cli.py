@@ -7,6 +7,8 @@ agents-first entry point that groups the LLM family (mirroring Wolfram's
 *LLM-Related Functionality* guide):
 
     wolfram_agents do "<task>"            NL task → planned LLMGraph → result
+                                          (the LLMGraph is saved to graphs/<slug>.json
+                                           + .wls — open the .wls in Mathematica)
     wolfram_agents synthesize "<prompt>"  LLMSynthesize — one-shot generation
     wolfram_agents graph run|info|serve … LLMGraph / LLMGraphSubmit (= the llmgraph CLI)
     wolfram_agents prompt list|show <name> LLMPrompt — the prompt library
@@ -38,6 +40,22 @@ def _setup_io() -> None:
             pass
 
 
+def _save_planned_graph(ir: dict, args: argparse.Namespace) -> None:
+    """Persist the planned LLMGraph as <base>.json + <base>.wls (Wolfram).
+
+    A `do` task is a workflow — an LLMGraph structure, not just LangGraph
+    plumbing — so by default we write it to disk. The .wls form opens in
+    Mathematica and runs on a real kernel; the .json runs on our runtime.
+    Disabled by --no-save; the one-shot `synthesize` never saves.
+    """
+    from wolfram_llmgraph.wolfram_export import save_graph, slugify
+
+    base = args.save_graph or os.path.join("graphs", slugify(args.task))
+    paths = save_graph(ir, base, task=args.task)
+    print(f"saved LLMGraph -> {paths['json']}  (+ {paths['wls']} for Mathematica)",
+          file=sys.stderr)
+
+
 def _cmd_do(args: argparse.Namespace) -> int:
     from wolfram_llmgraph.backends import resolve_backend
     from wolfram_llmgraph.planner import plan_graph, run_task
@@ -47,11 +65,15 @@ def _cmd_do(args: argparse.Namespace) -> int:
     print(f"using backend: {backend}", file=sys.stderr)
     if args.plan_only:
         ir = plan_graph(args.task, backend=backend, model=args.model, retries=args.retries)
+        if not args.no_save:
+            _save_planned_graph(ir, args)
         print(json.dumps(ir, indent=2, ensure_ascii=False))
         return 0
     prop = "All" if args.prop in ("all", "All") else None
     ir, result = run_task(args.task, backend=backend, model=args.model,
                           prop=prop, retries=args.retries)
+    if not args.no_save:
+        _save_planned_graph(ir, args)
     if args.show_graph:
         print("--- planned LLMGraph ---", file=sys.stderr)
         print(json.dumps(ir, indent=2, ensure_ascii=False), file=sys.stderr)
@@ -132,6 +154,11 @@ def build_parser() -> argparse.ArgumentParser:
                     help="print the planned LLMGraph (to stderr) before the result")
     do.add_argument("--plan-only", action="store_true",
                     help="only plan the graph (print the IR), don't run it")
+    do.add_argument("--save-graph", metavar="BASE",
+                    help="where to save the planned LLMGraph (BASE.json + BASE.wls); "
+                         "default: graphs/<task-slug>")
+    do.add_argument("--no-save", action="store_true",
+                    help="don't persist the planned LLMGraph to disk")
     do.add_argument("--prop", default="auto", help="auto (outputs) | all (every node)")
     do.add_argument("--retries", type=int, default=2,
                     help="self-repair attempts if the planned graph is invalid (default 2)")

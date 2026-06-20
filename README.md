@@ -54,7 +54,10 @@ renga({"Topic": "spring"})
   Cloud** — declarative graph, automatic dependency inference, concurrent
   scheduling, on plain Python/CI.
 - **Natural-language task → graph → result**: `wolfram_agents do "<task>"` has an LLM
-  plan the task into an `LLMGraph`, then runs it (LLM nodes only, for safety).
+  plan the task into an `LLMGraph`, then runs it (LLM nodes only, for safety). The
+  planned graph is **saved to `graphs/<slug>.json` + `.wls`** — the `.wls` is a real
+  Wolfram `LLMGraph` spec you can open and run in Mathematica (kernel-verified
+  round-trip), so a `do` task is a portable graph artifact, not throwaway plumbing.
 - **Swappable execution engine** (Executor port): the same semantics run on a
   zero-dependency `reference` executor or on LangGraph — proven equal by tests, so
   LangGraph is detachable, not load-bearing.
@@ -393,6 +396,9 @@ deterministic path (runs locally via `wolframscript`):
 
 `wolfram_agents do` plans your task into an `LLMGraph` with an LLM, then runs it. Add
 `--show-graph` to see the generated graph, or `--plan-only` to just print the IR.
+It also **writes the graph to `graphs/<slug>.json` + `.wls`** (override with
+`--save-graph BASE`, disable with `--no-save`); open the `.wls` in Mathematica to
+inspect or run the same `LLMGraph` on a real kernel.
 Real run (claude-cli) of the command above produced:
 
 ```
