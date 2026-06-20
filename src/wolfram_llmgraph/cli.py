@@ -254,9 +254,9 @@ def main(argv: list[str] | None = None) -> int:
         msg = str(exc)
         print(f"error: {msg}", file=sys.stderr)
         if any(k in msg.lower() for k in ("connection", "timed out", "timeout")):
-            print("hint: the LLM backend couldn't reach the service — usually a "
-                  "transient network issue. Retry, check your connection, or try "
-                  "another --backend. See `llmgraph doctor`.", file=sys.stderr)
+            print("hint: that LLM backend couldn't reach the service. Retry, check "
+                  "your connection, or switch backend — e.g. `--backend claude-cli` "
+                  "or LLMGRAPH_BACKEND=claude-cli. See `llmgraph doctor`.", file=sys.stderr)
         return 1
 
 

@@ -188,9 +188,9 @@ def _print_cli_error(exc: Exception) -> None:
     print(f"error: {msg}", file=sys.stderr)
     low = msg.lower()
     if "connection" in low or "timed out" in low or "timeout" in low:
-        print("hint: the LLM backend couldn't reach the service — this is usually a "
-              "transient network issue. Retry; or check your connection; or pick "
-              "another backend (e.g. --backend qwen). See `wolfram_agents doctor`.",
+        print("hint: that LLM backend couldn't reach the service. Retry; check your "
+              "connection; or switch backend — e.g. `--backend claude-cli`, or set "
+              "LLMGRAPH_BACKEND=claude-cli (in .env). See `wolfram_agents doctor`.",
               file=sys.stderr)
 
 
