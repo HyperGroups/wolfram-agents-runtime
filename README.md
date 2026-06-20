@@ -18,6 +18,10 @@ wolfram_agents doctor --fix                                # environment self-ch
 this README focuses on the **`LLMGraph`** model; see
 [`docs/design/08-agents-cli.md`](docs/design/08-agents-cli.md) for the family CLI.
 
+> 🚀 **Just want to get it running?** Jump to the
+> [**deployment & usage tutorial**](docs/TUTORIAL.md) — zero to running in a few minutes,
+> Windows (no bash) + Unix, with troubleshooting.
+
 ---
 
 `LLMGraph`: you describe a graph as an association of named nodes, each node's
@@ -315,8 +319,13 @@ bash scripts/setup.sh
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 ```
 
-> Not activating the venv? Call the tools directly: `.venv\Scripts\agents` (Windows)
-> or `.venv/bin/agents` (Unix). `python -m wolfram_agents.cli …` works anywhere.
+> Not activating the venv? Call the tools directly: `.venv\Scripts\wolfram_agents`
+> (Windows) or `.venv/bin/wolfram_agents` (Unix). `python -m wolfram_agents.cli …`
+> works anywhere.
+
+**New here?** Follow the step-by-step **[deployment & usage tutorial](docs/TUTORIAL.md)**
+(install → configure a backend → first command → save a graph & open it in
+Mathematica → monitor → CI → troubleshooting).
 
 ### Requirements & dependencies
 

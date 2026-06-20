@@ -13,7 +13,8 @@ Wolfram `LLMGraph` 编程模型的**瘦运行时**已可用:声明式图 + 依�
 支持五类节点(LLM / ListableLLM / Python 代码 / Wolfram 计算 / 条件),失败传播,完整属性选择,
 提示规格 / `LLMConfiguration` / `Authentication` / `Information` 对照实现,以及异步提交
 `LLMGraphSubmit`。6 个 LLM 后端(节点级可混合)+ 自动检测。与 Wolfram 原生 `LLMGraph` 做
-**双向 parity 互验**,并配 Web 实时监控 + 两层可视化。**131 个离线测试全过**(免 key、免网络)。
+**双向 parity 互验**,并配 Web 实时监控 + 两层可视化。NL 任务(`do`)规划出的图**默认落盘为
+`.json` + Wolfram `.wls`**——可在 Mathematica 打开、内核级往返验证。**139 个离线测试全过**(免 key、免网络)。
 
 ## 能力清单
 
@@ -29,6 +30,7 @@ Wolfram `LLMGraph` 编程模型的**瘦运行时**已可用:声明式图 + 依�
 | CLI | `cli.py` | ✅ 已实测 | `llmgraph run` / `info` / `serve` / **`doctor`**,`--input/-i/--prop/--model/--backend/--backend-strict`,`.env` 自动加载 |
 | **agents 伞包** | `wolfram_agents/`(`cli.py` + `__init__`) | ✅ 已实测 | **独立的系统入口包**(依赖 `wolfram_llmgraph` 库):`wolfram_agents` CLI(**`do`**/`synthesize`/`graph`/`prompt`/`backends`/`doctor`)+ 家族 API 门面。多包架构,`wolfram_llmgraph` 原样保留。见 [`design/08-agents-cli.md`](design/08-agents-cli.md) |
 | **NL→图规划** | `planner.py` | ✅ 已实测 | `wolfram_agents do "<任务>"`:LLM 把自然语言任务**编译成 LLMGraph IR**→运行→出结果。**安全**:只收 string-LLM 节点,拒绝 `wolfram`/`fn`/`test`(防 RCE)。**鲁棒**:可加载/输出存在/无环校验 + **自我修复重试**(错误回喂规划器,`--retries`,默认 2)。`plan_graph`/`run_task`/`check_runnable` |
+| **IR→Wolfram 导出** | `wolfram_export.py` | ✅ 已实测 | `to_wolfram`/`save_graph`/`slugify`:把 IR 反向序列化成 Wolfram `spec=<\|name->"prompt with \`Slot\`"\|>; LLMGraph[spec]` 脚本(`wlg2json.wls` 的反向)。`do` **默认落盘** `graphs/<slug>.json + .wls`(`--save-graph`/`--no-save`)。planner 只产 string-LLM 节点=无损子集,**内核级往返验证**(真内核重读 `.wls` 得到完全相同 IR + 推对 output sink) |
 | LLMSynthesize | `synthesize.py` | ✅ 已实测 | 一次性文本生成(家族成员,独立模块);`wolfram_agents synthesize "…"` / `LLMSynthesize(...)` |
 | 环境自检 | `doctor.py` + `scripts/setup.{sh,ps1}` | ✅ 已实测 | `doctor [--json] [--fix]`:逐后端凭据 + 修复提示 + claude/wolframscript 检测 + `auto` 解析,退出码反映可用性;**`--fix`** 建 `.env` + 引导。一键安装:`setup.sh`(Unix)/ **`setup.ps1`(Windows 原生 PowerShell,不依赖 bash)**,离线容错 |
 | 运行时监控 | `monitor.py` + `server.py` + `webapp/index.html` | ✅ 已实测 | 节点生命周期事件 + 计时 + token 用量 + 成本;零依赖 HTTP+SSE + 单文件前端。**两层视图**(LLMGraph 语义层 `/api/graph` + LangGraph 运行层 `/api/langgraph` + `draw_mermaid()`);SVG pan/zoom、SSE 自动重连、亮暗主题、流式 token、多运行对比、多 notebook。见 [`design/06-runtime-monitor.md`](design/06-runtime-monitor.md) |
@@ -64,7 +66,7 @@ Wolfram `LLMGraph` 编程模型的**瘦运行时**已可用:声明式图 + 依�
 
 `parity_sweep.py` 默认只跑 det 档(本机、免 key);`--with-llm` 才跑 llm 档。
 
-## 测试(已实测,`pytest -q` → **131 passed**,免 key/网络)
+## 测试(已实测,`pytest -q` → **139 passed**,免 key/网络)
 
 | 文件 | 数 | 覆盖 |
 |---|---|---|
@@ -79,6 +81,7 @@ Wolfram `LLMGraph` 编程模型的**瘦运行时**已可用:声明式图 + 依�
 | `test_executors.py` | 8 | **Executor 端口内部 parity**:Reference vs LangGraph 结果精确相等、override/失败传播/get_executor |
 | `test_planner.py` | 13 | **NL→图规划**:JSON抽取/校验(拒wolfram·fn)/环路·输出校验/**自我修复重试**/run_task |
 | `test_agents_cli.py` | 6 | `wolfram_agents` 家族 CLI:synthesize/prompt/graph 转发/backends/doctor --fix |
+| `test_wolfram_export.py` | 8 | **IR→Wolfram 导出**:`to_wolfram`(spec 形/转义/assoc 节点/拒非 LLM)+ `save_graph`/`slugify` + `do` 默认落盘/`--no-save` |
 | `test_inputs.py` / `test_llmgraph_prop.py` / `test_doctor.py` | 3 / 3 / 3 | 裸值单输入 / `"LLMGraph"` 结果标注 / 环境自检(后端检测/报告) |
 | `test_server.py` | 1 | HTTP 端点 + 运行流(另:SSE 实时流实跑验证) |
 
@@ -114,6 +117,6 @@ Wolfram `LLMGraph` 编程模型的**瘦运行时**已可用:声明式图 + 依�
 ## 下一步
 
 优先级见 [`drafts/roadmap.md`](drafts/roadmap.md)。近期候选:
-**①** `LLMSynthesizeSubmit`(异步生成)+ `agents chat`(ChatObject)——继续按家族补成员;
+**①** `LLMSynthesizeSubmit`(异步生成)+ `wolfram_agents chat`(ChatObject)——继续按家族补成员;
 **②** `LLMTool` 工具调用(补 `LLMConfiguration` 最后一块,接 `wolfram_agents` 子命令);
 **③** 统一 LangChain backend 流式(与 claude-cli 一致)。

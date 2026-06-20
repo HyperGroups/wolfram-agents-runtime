@@ -56,7 +56,7 @@
       <span class="pill">6 LLM backends</span>
       <span class="pill">no API key needed (claude-cli / Qwen)</span>
       <span class="pill">live web monitor</span>
-      <span class="pill badge">131 offline tests green</span>
+      <span class="pill badge">139 offline tests green</span>
     </div>
 <pre><span class="c"># a natural-language task → planned graph → result</span>
 <span class="k">wolfram_agents</span> do "summarize the pros &amp; cons of X and recommend one"
@@ -76,6 +76,7 @@
         <ul>
           <li><b>LLMGraph model with zero Wolfram dependency</b> <span class="m">— auto deps + concurrency on plain Python/CI</span></li>
           <li><b>Natural-language task → graph → result</b> <span class="m">— <code>wolfram_agents do "…"</code> has an LLM plan the task into an LLMGraph, then runs it (self-repairing, LLM nodes only)</span></li>
+          <li><b>Tasks persist as portable graphs</b> <span class="m">— <code>do</code> saves the planned LLMGraph to <code>.json</code> + a real Wolfram <code>.wls</code> you can open & run in Mathematica (kernel-verified round-trip)</span></li>
           <li><b>Swappable execution engine</b> <span class="m">— same semantics on a zero-dep <code>reference</code> executor or LangGraph; LangGraph is detachable, proven equal by tests</span></li>
           <li><b>No vendor lock-in, no Anthropic key</b> <span class="m">— 6 backends, per-node mix, <code>auto</code>; free via claude-cli / Qwen</span></li>
           <li><b>LLM + Python + Wolfram-compute + conditional nodes</b> <span class="m">— one graph, with failure propagation</span></li>
@@ -119,8 +120,9 @@
 
 <footer>
   <div class="wrap">
-    Full status &amp; per-feature comparison to Wolfram's docs: <code>docs/STATUS.md</code> ·
-    design notes: <code>docs/design/</code> · source &amp; README in the repository.
+    Get running: <code>docs/TUTORIAL.md</code> · full status &amp; per-feature comparison to
+    Wolfram's docs: <code>docs/STATUS.md</code> · design notes: <code>docs/design/</code> ·
+    source &amp; README in the repository.
     <br>Reproduces Wolfram's LLM family programming model; not affiliated with Wolfram Research.
   </div>
 </footer>

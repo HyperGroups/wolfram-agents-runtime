@@ -35,6 +35,19 @@ wolfram_agents doctor [--fix] [--json]    环境自检 / 引导式安装(doctor.
   所以 `llmgraph run …` ≡ `wolfram_agents graph run …`,向后兼容。
 - 两个 console script 都注册:`wolfram_agents`(家族主入口)、`llmgraph`(图入口)。
 
+### `do` 默认落盘:任务即可移植的 LLMGraph
+
+一个 `do` 任务**是一张 LLMGraph 结构**(工作流),不是一次性的 langgraph 临时执行——这正是框架的
+价值点。所以 `do` **默认把规划出的图写到 `graphs/<slug>.{json,wls}`**:
+
+- `.json` —— 本 runtime 的 IR,`graph run/info/serve` 复跑;
+- `.wls` —— **真正的 Wolfram `LLMGraph` spec**(`spec=<|name->"prompt with \`Slot\`"|>; LLMGraph[spec]`),
+  在 Mathematica 打开/检查/上真内核跑。由 `wolfram_export.py` 生成,是 `tools/wlg2json.wls` 的反向。
+
+planner 出于安全只产 **string-LLM 节点**,恰好是**可无损翻译回 Wolfram 的子集**,所以导出永远忠实
+(backtick 槽原样带过,Input/输出 sink 由 LLMGraph 自动推断)。**内核级往返验证**:把生成的 `.wls`
+喂回 `wlg2json.wls`,真内核重读得到完全相同的 IR。控制:`--save-graph BASE` / `--no-save`。
+
 ## 多包架构(一个系统多个包)
 
 **一个系统可以有多个包**。我们不把所有东西塞进一个包,而是:
@@ -65,6 +78,8 @@ src/
 | `prompts.py` | wolfram_llmgraph | `LLMPrompt` / `TemplateObject` / `PromptLibrary` |
 | `backends.py` | wolfram_llmgraph | 服务 + `LLMConfiguration` 取值 |
 | `doctor.py` | wolfram_llmgraph | 环境自检(无 Wolfram 对应,工程need) |
+| `planner.py` | wolfram_llmgraph | NL→图规划(`do` 的实现) |
+| `wolfram_export.py` | wolfram_llmgraph | IR→Wolfram `LLMGraph` 导出(`do` 落盘 / Mathematica 往返) |
 | `cli.py` + `__init__.py` | **wolfram_agents** | 家族主入口 + 公开 API 门面 |
 
 新成员按同样方式接入:`LLMSynthesizeSubmit`、`LLMTool`(工具调用)、`chat`(ChatObject)

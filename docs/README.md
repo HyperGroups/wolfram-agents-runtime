@@ -5,6 +5,9 @@
 
 > 📌 **当前进展看 [`STATUS.md`](STATUS.md)**(权威现状快照:能力清单、节点矩阵、
 > 测试与双向验证结果、已知缺口)。本页是文档导航与代码地图。
+>
+> 🚀 **想直接跑起来看 [`TUTORIAL.md`](TUTORIAL.md)**(部署与使用教程:安装 → 配置后端 →
+> 第一个命令 → 任务落盘成可在 Mathematica 打开的 LLMGraph → 监控 → CI → 故障排查)。
 
 ## 一分钟理解
 
@@ -46,6 +49,7 @@ src/wolfram_llmgraph/      LLMGraph 库(家族成员各自一个模块)
   submit.py                异步提交 LLMGraphSubmit:Task + HandlerFunctions 事件
   synthesize.py            LLMSynthesize:一次性文本生成
   planner.py               NL→图规划:plan_graph/run_task/check_runnable(`wolfram_agents do` 的实现)
+  wolfram_export.py        IR→Wolfram 导出:to_wolfram/save_graph/slugify(`do` 默认落盘 .json+.wls;wlg2json.wls 的反向)
   loaders.py  cli.py       JSON 加载 · CLI(llmgraph run/info/serve/doctor,.env 自动加载)
   server.py                零依赖 HTTP+SSE 监控服务(/api/graph·state·events·run)
   webapp/index.html        前端单文件 web 应用:SVG DAG 实时着色 + 进度 + 详情 + 事件流
