@@ -44,6 +44,7 @@ def _cmd_do(args: argparse.Namespace) -> int:
 
     backend = resolve_backend(args.backend or os.environ.get("LLMGRAPH_BACKEND"),
                               strict=args.backend_strict)
+    print(f"using backend: {backend}", file=sys.stderr)
     if args.plan_only:
         ir = plan_graph(args.task, backend=backend, model=args.model, retries=args.retries)
         print(json.dumps(ir, indent=2, ensure_ascii=False))
@@ -68,6 +69,7 @@ def _cmd_synthesize(args: argparse.Namespace) -> int:
 
     backend = resolve_backend(args.backend or os.environ.get("LLMGRAPH_BACKEND"),
                               strict=args.backend_strict)
+    print(f"using backend: {backend}", file=sys.stderr)
     text = sys.stdin.read() if args.prompt == "-" else args.prompt
     print(LLMSynthesize(text, backend=backend, model=args.model))
     return 0
