@@ -251,7 +251,12 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return args.func(args)
     except Exception as exc:  # surface a clean error on the CLI
-        print(f"error: {exc}", file=sys.stderr)
+        msg = str(exc)
+        print(f"error: {msg}", file=sys.stderr)
+        if any(k in msg.lower() for k in ("connection", "timed out", "timeout")):
+            print("hint: the LLM backend couldn't reach the service — usually a "
+                  "transient network issue. Retry, check your connection, or try "
+                  "another --backend. See `llmgraph doctor`.", file=sys.stderr)
         return 1
 
 

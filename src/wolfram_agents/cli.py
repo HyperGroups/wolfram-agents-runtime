@@ -177,8 +177,19 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return args.func(args)
     except Exception as exc:  # clean error on the CLI
-        print(f"error: {exc}", file=sys.stderr)
+        _print_cli_error(exc)
         return 1
+
+
+def _print_cli_error(exc: Exception) -> None:
+    msg = str(exc)
+    print(f"error: {msg}", file=sys.stderr)
+    low = msg.lower()
+    if "connection" in low or "timed out" in low or "timeout" in low:
+        print("hint: the LLM backend couldn't reach the service — this is usually a "
+              "transient network issue. Retry; or check your connection; or pick "
+              "another backend (e.g. --backend qwen). See `wolfram_agents doctor`.",
+              file=sys.stderr)
 
 
 if __name__ == "__main__":
