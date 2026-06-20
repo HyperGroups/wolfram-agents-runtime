@@ -209,11 +209,15 @@ def test_independent_nodes_run_concurrently():
         },
         llm_factory=fake_factory(log=log, delay=0.2),
     )
-    start = time.perf_counter()
     g()
-    elapsed = time.perf_counter() - start
-    # A and B are independent: concurrent => well under the serial 0.6s.
-    assert elapsed < 0.5, f"expected concurrency, took {elapsed:.2f}s"
+    # Measure *when each node started* (robust to one-time engine import/compile
+    # overhead, which happens before any node runs). The two independent nodes
+    # (A, B) start together; the dependent node (J) starts a superstep later.
+    starts = sorted(t for _, t in log)
+    assert starts[1] - starts[0] < 0.15, (
+        f"independent A,B did not overlap: started {starts[1]-starts[0]:.2f}s apart")
+    assert starts[2] - starts[1] >= 0.15, (
+        f"dependent J started too early ({starts[2]-starts[1]:.2f}s after its parents)")
 
 
 # -- P0-1: ListableLLMFunction tests --
